@@ -31,14 +31,14 @@ class ProductBundleController
         $f = session('bundle_filter', [
             'range' => 'all',
             'brand_id' => null,
-            'start' => null,
-            'end' => null,
+            'from' => null,
+            'to' => null,
         ]);
 
         return [
             'brand_id' => $f['brand_id'] ?? null,
-            'start' => $f['start'] ? Carbon::parse($f['start'])->startOfDay() : null,
-            'end' => $f['end'] ? Carbon::parse($f['end'])->endOfDay() : null,
+            'from' => $f['from'] ? Carbon::parse($f['from'])->startOfDay() : null,
+            'to' => $f['to'] ? Carbon::parse($f['to'])->endOfDay() : null,
         ];
     }
 
@@ -252,40 +252,30 @@ class ProductBundleController
     public function analyze(Request $request)
     {
         $request->validate([
-            'range' => 'nullable|in:all,this_month,this_year',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
             'brand_id' => 'nullable|exists:product_brands,id',
         ]);
-
-        // Hitung periode yang dipilih
-        $start = null;
-        $end = null;
-        if ($request->range === 'this_month') {
-            $start = Carbon::now()->startOfMonth();
-            $end = Carbon::now()->endOfMonth();
-        } elseif ($request->range === 'this_year') {
-            $start = Carbon::now()->startOfYear();
-            $end = Carbon::now()->endOfYear();
-        }
 
         // Simpan ke session → dipakai oleh build() & relatedRank()
         session([
             'bundle_filter' => [
-                'range' => $request->range ?? 'all',
+                'from' => $request->filled('from') ? $request->input('from') : null,
+                'to' => $request->filled('to') ? $request->input('to') : null,
                 'brand_id' => $request->brand_id ? (int) $request->brand_id : null,
-                'start' => $start?->toDateString(),
-                'end' => $end?->toDateString(),
+                'range' => $request->filled('from') && $request->filled('to') ? 'custom' : 'all',
             ],
         ]);
 
         // ====== ambil transaksi & jalankan FP-Growth (kode asli kamu) ======
         $txQuery = SalesTransaction::query();
-        if (!$request->filled('range') || $request->range === 'all') {
-            // semua waktu
-        } elseif ($request->range === 'this_month') {
-            $txQuery->whereMonth('invoice_date', now()->month)->whereYear('invoice_date', now()->year);
-        } else {
-            $txQuery->whereYear('invoice_date', now()->year);
+        if ($request->filled('from') && $request->filled('to')) {
+            // Inclusive sampai end-of-day
+            $start = Carbon::parse($request->input('from'))->startOfDay();
+            $end = Carbon::parse($request->input('to'))->endOfDay();
+            $txQuery->whereBetween('invoice_date', [$start, $end]);
         }
+        // else: semua waktu (tanpa filter tanggal)
         $transactions = $txQuery->with(['sales_transaction_items.product'])->get();
 
         $payload = [];
@@ -342,8 +332,8 @@ class ProductBundleController
         // Subquery frekuensi per periode (join sales_transactions)
         $freqQuery = SalesTransactionItem::query()->select('sales_transaction_items.product_id', DB::raw('COUNT(*) as freq'))->join('sales_transactions', 'sales_transactions.id', '=', 'sales_transaction_items.sales_transaction_id');
 
-        if ($filter['start'] && $filter['end']) {
-            $freqQuery->whereBetween('sales_transactions.invoice_date', [$filter['start'], $filter['end']]);
+        if ($filter['from'] && $filter['to']) {
+            $freqQuery->whereBetween('sales_transactions.invoice_date', [$filter['from'], $filter['to']]);
         }
 
         if ($filter['brand_id']) {
@@ -399,8 +389,8 @@ class ProductBundleController
         // Frekuensi per periode
         $freqQuery = SalesTransactionItem::query()->select('sales_transaction_items.product_id', DB::raw('COUNT(*) as freq'))->join('sales_transactions', 'sales_transactions.id', '=', 'sales_transaction_items.sales_transaction_id');
 
-        if ($filter['start'] && $filter['end']) {
-            $freqQuery->whereBetween('sales_transactions.invoice_date', [$filter['start'], $filter['end']]);
+        if ($filter['from'] && $filter['to']) {
+            $freqQuery->whereBetween('sales_transactions.invoice_date', [$filter['from'], $filter['to']]);
         }
         if ($filter['brand_id']) {
             $freqQuery->join('products', 'products.id', '=', 'sales_transaction_items.product_id')->where('products.product_brand_id', $filter['brand_id']);

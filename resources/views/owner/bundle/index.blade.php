@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
+@endpush
 @section('content')
     <div class="card bg-light-info shadow-none position-relative overflow-hidden">
         <div class="card-body px-4 py-3">
@@ -28,12 +31,11 @@
                         @csrf
                         <div class="row g-3 align-items-end">
                             <div class="col-md-4">
-                                <label class="form-label">Range Waktu</label>
-                                <select class="form-select" name="range">
-                                    <option value="all">Semua Waktu</option>
-                                    <option value="this_month">Bulan ini</option>
-                                    <option value="this_year">Tahun ini</option>
-                                </select>
+                                <label class="form-label">Rentang Tanggal</label>
+                                <input type="text" id="daterange" class="form-control" autocomplete="off"
+                                    placeholder="Pilih rentang tanggal atau 'Semua'">
+                                <input type="hidden" name="from" id="from">
+                                <input type="hidden" name="to" id="to">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Brand (opsional)</label>
@@ -78,6 +80,66 @@
     </div>
 @endsection
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+    <script>
+        $(function() {
+            // ------- Date Range -------
+            const $dr = $('#daterange'),
+                $from = $('#from'),
+                $to = $('#to');
+
+            let isAll = false;
+
+            function setRange(a, b, all = false) {
+                isAll = !!all;
+                if (isAll) {
+                    $dr.val('Semua');
+                    $from.val('');
+                    $to.val('');
+                    return;
+                }
+                $dr.val(a.format('DD MMM YYYY') + ' - ' + b.format('DD MMM YYYY'));
+                $from.val(a.format('YYYY-MM-DD'));
+                $to.val(b.format('YYYY-MM-DD'));
+            }
+
+            const initFrom = moment().startOf('month');
+            const initTo = moment().endOf('day');
+
+            $dr.daterangepicker({
+                startDate: initFrom,
+                endDate: initTo,
+                autoUpdateInput: false,
+                ranges: {
+                    'Semua': [moment('1900-01-01'), moment('2099-12-31')],
+                    'Hari ini': [moment(), moment()],
+                    'Kemarin': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Minggu ini': [moment().startOf('week'), moment().endOf('week')],
+                    'Bulan ini': [moment().startOf('month'), moment().endOf('month')],
+                    'Tahun ini': [moment().startOf('year'), moment().endOf('year')]
+                },
+                locale: {
+                    format: 'DD/MM/YYYY'
+                }
+            }, function(start, end, label) {
+                if (label === 'Semua') {
+                    setRange(null, null, true);
+                } else {
+                    setRange(start, end, false);
+                }
+            });
+
+            // Default: Semua
+            setRange(null, null, true);
+
+            $dr.on('cancel.daterangepicker', function() {
+                setRange(null, null, true);
+            });
+        });
+    </script>
+
     <script>
         let bundleDT;
         $(document).ready(function() {
