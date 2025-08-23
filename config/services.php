@@ -40,7 +40,7 @@ return [
         // LSTM
         'lstm_url' => env('FLASK_PRED_URL', 'http://127.0.0.1:5000'),
         'lstm_token' => env('PRED_TOKEN'),
-        'lstm_look_back' => (int) env('LSTM_LOOK_BACK', 6),
+        'lstm_look_back' => (int) env('LSTM_LOOK_BACK', 2),
         'lstm_model_version' => env('MODEL_VERSION', 'lstm_v1'),
         'profit_threshold_absolute' => env('PROFIT_THRESHOLD_ABSOLUTE'),
     ],

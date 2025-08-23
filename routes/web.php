@@ -89,7 +89,7 @@ Route::middleware(['auth'])->group(function () {
                     Route::post('/import', [MonthlyClosingImportController::class, 'import'])->name('import.do');
                     Route::get('/edit/{closing}', [MonthlyBookClosingController::class, 'edit'])->name('edit');
                     Route::put('/update/{closing}', [MonthlyBookClosingController::class, 'update'])->name('update');
-                    Route::delete('/destroy/{closing}', [MonthlyBookClosingController::class, 'destory'])->name('destroy');
+                    Route::delete('/destroy/{closing}', [MonthlyBookClosingController::class, 'destroy'])->name('destroy');
                 });
 
             // Bundle

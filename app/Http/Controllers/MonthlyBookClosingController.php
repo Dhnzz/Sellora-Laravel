@@ -80,7 +80,7 @@ class MonthlyBookClosingController
         $req->validate([
             'year' => 'required|integer|min:2000|max:2100',
             'month' => 'required|integer|min:1|max:12',
-            'total_profit' => 'nullable|numeric',
+            'total_net' => 'nullable|numeric',
             'threshold_profit' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
@@ -88,8 +88,8 @@ class MonthlyBookClosingController
         $year = (int) $req->year;
         $month = (int) $req->month;
 
-        // Jika total_profit kosong/0, auto-akumulasi dari transaksi periode tsb
-        $totalProfit = $req->filled('total_profit') && (float) $req->total_profit > 0 ? (float) $req->total_profit : $this->computeNetProfit($year, $month);
+        // Jika total_net kosong/0, auto-akumulasi dari transaksi periode tsb
+        $totalProfit = $req->filled('total_net') && (float) $req->total_net > 0 ? (float) $req->total_net : $this->computeNetProfit($year, $month);
 
         // Simpan / update tutup buku
         $closing = MonthlyBookClosing::updateOrCreate(
@@ -110,7 +110,7 @@ class MonthlyBookClosingController
         }
 
         $cfg = config('services.recsys');
-        $lookBack = (int) ($cfg['lstm_look_back'] ?? 6);
+        $lookBack = (int) ($cfg['lstm_look_back'] ?? 2);
         $out = $predictor->predictNext($rows, $lookBack);
 
         // Tentukan bulan depan dari periode yang barusan ditutup
@@ -170,6 +170,14 @@ class MonthlyBookClosingController
         ];
 
         return view('owner.closing.edit', compact('data'));
+    }
+
+    public function destroy(MonthlyBookClosing $closing)
+    {
+        // Hapus data tutup buku bulanan
+        $closing->delete();
+
+        return redirect()->route('owner.closing.index')->with('success', 'Data tutup buku berhasil dihapus.');
     }
 
     private function buildCashflowPlan(float $gap, float $predicted, float $lastActual): array

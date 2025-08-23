@@ -24,16 +24,9 @@
         <div class="card-body">
             <h5 class="mb-3">Prediksi Pendapatan Bulanan (LSTM)</h5>
 
-            <form class="row g-2" method="POST" action="{{ route('owner.predictions.predict') }}">
-                @csrf
-                <div class="col-auto">
-                    <input type="number" step="0.01" min="0" required name="threshold_profit"
-                        class="form-control" placeholder="Masukkan Threshold Profit (Rp)">
-                </div>
-                <div class="col-auto">
-                    <button class="btn btn-primary">Prediksi Bulan Depan</button>
-                </div>
-            </form>
+            <a href="{{ route('owner.closing.index') }}" class="btn btn-sm btn-primary mb-3"><i
+                    class="ti ti-arrow-left"></i>
+                Kembali</a>
 
             <div class="mt-4">
                 <canvas id="chartRevenue"></canvas>
@@ -103,30 +96,71 @@
         const labels = historical.map(r => r.ym);
         const dataHist = historical.map(r => Number(r.total_profit));
 
-        // Ambil prediksi terakhir untuk ditaruh sebagai titik di ujung
-        let nextLabel = null,
-            nextValue = null;
+        // Ambil semua prediksi untuk ditampilkan sebagai node prediksi
+        const predictionLabels = [];
+        const predictionData = [];
+
         if (preds.length > 0) {
-            const last = preds[preds.length - 1];
-            nextLabel = `${String(last.year).padStart(4,'0')}-${String(last.month).padStart(2,'0')}-01`;
-            nextValue = Number(last.predicted_profit);
+            preds.forEach(pred => {
+                const predLabel = `${String(pred.year).padStart(4,'0')}-${String(pred.month).padStart(2,'0')}-01`;
+                predictionLabels.push(predLabel);
+                predictionData.push(Number(pred.predicted_profit));
+            });
         }
 
         const ctx = document.getElementById('chartRevenue').getContext('2d');
+
+        // Dataset untuk data historis saja
         const datasets = [{
             label: 'Pendapatan Historis',
             data: dataHist,
             tension: 0.25,
             borderWidth: 2,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            pointRadius: 3,
+            pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
         }];
 
-        if (nextLabel && nextValue !== null) {
-            labels.push(nextLabel);
+        if (predictionLabels.length > 0) {
+            // Buat array data prediksi dengan null untuk periode yang tidak ada prediksi
+            const predDataArray = [];
+
+            labels.forEach((label, index) => {
+                const predIndex = predictionLabels.indexOf(label);
+                if (predIndex !== -1) {
+                    // Jika ada prediksi untuk periode ini, gunakan nilai prediksi
+                    predDataArray.push(predictionData[predIndex]);
+                } else {
+                    // Jika tidak ada prediksi, gunakan null
+                    predDataArray.push(null);
+                }
+            });
+
+            // Tambahkan prediksi untuk periode yang tidak ada di data historis
+            predictionLabels.forEach((predLabel, index) => {
+                if (!labels.includes(predLabel)) {
+                    labels.push(predLabel);
+                    predDataArray.push(predictionData[index]);
+                }
+            });
+
             datasets.push({
-                label: 'Prediksi Bulan Depan',
-                data: [...Array(dataHist.length).fill(null), nextValue],
-                borderWidth: 2,
-                pointRadius: 4,
+                label: 'Prediksi Pendapatan',
+                data: predDataArray,
+                borderWidth: 3,
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                pointRadius: 5,
+                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                tension: 0.2,
+                fill: false,
+                // Tampilkan titik untuk semua data prediksi
+                pointHoverRadius: 8,
             });
         }
 

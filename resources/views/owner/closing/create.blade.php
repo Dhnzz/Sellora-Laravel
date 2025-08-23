@@ -43,7 +43,7 @@
                             <span class="input-group-text">Rp.</span>
                             <input type="text" id="total_net"
                                 class="form-control @error('total_net') is-invalid @enderror format-ribuan"
-                                value="{{ old('total_net', $suggestedProfit) }}" data-target="total_net_raw">
+                                value="{{ old('total_net', ($suggestedProfit == 0 ? '' : $suggestedProfit)) }}" data-target="total_net_raw">
                             <span class="input-group-text">.00</span>
                             @error('total_net')
                                 <small class="invalid-feedback">

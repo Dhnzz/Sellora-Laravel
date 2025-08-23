@@ -41,7 +41,7 @@ class MonthlyClosingImportController
         try {
             Excel::import($importer, $request->file('file'));
         } catch (\Throwable $e) {
-            return back()->with('error', 'Gagal import: ' . $e->getMessage());
+            return redirect()->route('owner.closing.index')->with('error', 'Gagal import: ' . $e->getMessage());
         }
 
         $s = $importer->summary;
@@ -49,9 +49,9 @@ class MonthlyClosingImportController
         if (!empty($s['errors'])) {
             $msg .= ' Beberapa baris di-skip.';
             // Simpan error detail ke session untuk ditampilkan
-            return back()->with('warning', $msg)->with('import_errors', $s['errors']);
+            return redirect()->route('owner.closing.index')->with('warning', $msg)->with('import_errors', $s['errors']);
         }
 
-        return back()->with('success', $msg);
+        return redirect()->route('owner.closing.index')->with('success', $msg);
     }
 }
