@@ -1,29 +1,18 @@
 @extends('layouts.customer.app')
 
-@section('title', 'Beranda – Sellora')
-
 @section('content')
-    {{-- HERO / Carousel Bundling (pakai komponen yang sudah kamu punya, contoh sederhana) --}}
-    <div id="heroCarousel" class="carousel slide c-hero mb-4" data-bs-ride="carousel">
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <img src="https://picsum.photos/1200/360?random=1" class="d-block w-100" alt="Promo 1">
+    <div class="owl-carousel owl-theme c-hero mb-4" style="max-width: 1114px; max-height: 200px;" id="heroCarousel">
+        @foreach ($bundles as $item)
+            <div class="item me-2">
+                <a href="{{ route('customer.bundle.index', $item->id) }}">
+                    @if ($item->flyer != 'uploads/images/product_bundles/bundle-1.png')
+                        <img src="{{ asset('storage/' . $item->flyer) }}" alt="Promo {{ $loop->iteration }}">
+                    @else
+                        <img src="{{ asset($item->flyer) }}" alt="Promo {{ $loop->iteration }}">
+                    @endif
+                </a>
             </div>
-            <div class="carousel-item">
-                <img src="https://picsum.photos/1200/360?random=2" class="d-block w-100" alt="Promo 2">
-            </div>
-            <div class="carousel-item">
-                <img src="https://picsum.photos/1200/360?random=3" class="d-block w-100" alt="Promo 3">
-            </div>
-        </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Sebelumnya</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Selanjutnya</span>
-        </button>
+        @endforeach
     </div>
 
     {{-- Section: Bundling Aktif --}}
@@ -59,3 +48,30 @@
         @endif
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(document).ready(function() {
+            $('#heroCarousel').owlCarousel({
+                loop: true,
+                margin: 10,
+                nav: true,
+                dots: false,
+                autoplay: true,
+                autoplayTimeout: 5000,
+                autoplayHoverPause: true,
+                responsive: {
+                    0: {
+                        items: 1
+                    },
+                    600: {
+                        items: 1
+                    },
+                    1000: {
+                        items: 1
+                    }
+                }
+            });
+        });
+    </script>
+@endpush

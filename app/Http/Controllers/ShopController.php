@@ -18,7 +18,7 @@ class ShopController
 
         $bundles = ProductBundle::query()->where('is_active', true)->whereDate('start_date', '<=', $today)->whereDate('end_date', '>=', $today)->select('id', 'bundle_name', 'description', 'special_bundle_price', 'original_price', 'start_date', 'end_date', 'flyer')->orderBy('start_date')->limit(8)->get();
 
-        return view('customer.page.home', compact('bundles'));
+        return view('customer.home', compact('bundles'));
     }
 
     public function catalog(Request $request)

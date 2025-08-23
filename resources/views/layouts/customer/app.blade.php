@@ -11,6 +11,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
 
+    {{-- Owl Carousel CSS --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.theme.default.min.css">
+
     {{-- Toastr (opsional notifikasi) --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
 
@@ -110,6 +115,110 @@
             border: none;
             border-bottom: 1px solid #f1f5f9;
         }
+
+        /* Owl Carousel Custom Styles */
+        .owl-carousel {
+            max-width: 1114px;
+            max-height: 200px;
+            margin: 0 auto;
+        }
+
+        .owl-carousel .owl-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: var(--radius);
+        }
+
+        .owl-carousel .owl-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .owl-carousel .owl-nav button {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.9) !important;
+            border-radius: 50% !important;
+            color: var(--c-dark) !important;
+            font-size: 1.2rem;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+        }
+
+        .owl-carousel .owl-nav button:hover {
+            background: rgba(255, 255, 255, 1) !important;
+            transform: scale(1.1);
+        }
+
+        .owl-carousel .owl-nav .owl-prev {
+            left: 15px;
+        }
+
+        .owl-carousel .owl-nav .owl-next {
+            right: 15px;
+        }
+
+        .owl-carousel .owl-dots {
+            margin-top: 15px;
+        }
+
+        .owl-carousel .owl-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #d1d5db !important;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+
+        .owl-carousel .owl-dot.active {
+            background: var(--c-primary) !important;
+            transform: scale(1.2);
+        }
+
+        /* Timeline Styles */
+        .timeline {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-icon {
+            position: relative;
+            z-index: 1;
+        }
+
+        .timeline-content {
+            padding-left: 15px;
+        }
+
+        .timeline-icon .rounded-circle {
+            border: 3px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
     </style>
 
     @stack('head')
@@ -131,7 +240,7 @@
                 <form action="{{ route('customer.catalog') }}" class="ms-auto flex-grow-1 c-search position-relative"
                     style="max-width:680px;">
                     <i class="ti ti-search"></i>
-                    <input class="form-control form-control-lg" type="search" name="q"
+                    <input class="form-control form-control-sm" type="search" name="q"
                         value="{{ request('q') }}" placeholder="Cari produk, merek, atau kategori...">
                 </form>
 
@@ -154,8 +263,9 @@
                             <i class="ti ti-user"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href=""><i
-                                        class="ti ti-receipt me-2"></i>Pesanan Saya</a></li>
+                            <li><a class="dropdown-item" href="{{ route('customer.order.index') }}"><i
+                                        class="ti ti-receipt me-2"></i>Pesanan
+                                    Saya</a></li>
                             <li><a class="dropdown-item" href="#"><i class="ti ti-heart me-2"></i>Wishlist</a>
                             </li>
                             <li>
@@ -239,6 +349,7 @@
     {{-- Scripts --}}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
     {{-- Cart badge sample loader (ganti ke API cart kamu) --}}

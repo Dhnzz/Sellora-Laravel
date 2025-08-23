@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RoleController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SalesAgentController;
+use App\Http\Controllers\ShopBundleController;
 use App\Http\Controllers\ProductUnitController;
 use App\Http\Controllers\ProductBrandController;
 use App\Http\Controllers\ProductBundleController;
@@ -361,5 +363,19 @@ Route::middleware(['auth'])->group(function () {
         ->group(function () {
             Route::get('/home', [ShopController::class, 'home'])->name('home');
             Route::get('/catalog', [ShopController::class, 'catalog'])->name('catalog');
+
+            Route::prefix('order')
+                ->name('order.')
+                ->group(function () {
+                    Route::get('/', [OrderController::class, 'index'])->name('index');
+                    Route::get('/data', [OrderController::class, 'data'])->name('data');
+                    Route::get('/{id}', [OrderController::class, 'show'])->name('show');
+                });
+
+            Route::prefix('bundle')
+                ->name('bundle.')
+                ->group(function () {
+                    Route::get('/{bundle}', [ShopBundleController::class, 'index'])->name('index');
+                });
         });
 });
