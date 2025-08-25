@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\SalesAgent;
 use App\Models\PurchaseOrder;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductAssociationCustomer;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -27,5 +28,10 @@ class Customer extends Model
     public function purchase_orders(): HasMany
     {
         return $this->hasMany(PurchaseOrder::class, 'customer_id');
+    }
+
+    public function product_association_customers(): HasMany
+    {
+        return $this->hasMany(ProductAssociationCustomer::class);
     }
 }

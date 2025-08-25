@@ -43,21 +43,23 @@ class OrderController
             // Filter by period
             if ($request->filled('period')) {
                 $days = (int) $request->period;
-                $query->where('created_at', '>=', Carbon::now()->subDays($days));
+                $query->where('invoice_date', '>=', Carbon::now()->subDays($days));
             }
 
             // Search
-            if ($request->filled('search')) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('invoice_id', 'like', "%{$search}%")->orWhere('transaction_status', 'like', "%{$search}%");
-                });
-            }
+            // if ($request->filled('search')) {
+            //     $search = $request->search;
+            //     $query->where(function ($q) use ($search) {
+            //         $q->where('invoice_id', 'like', "%{$search}%")
+            //         ->orWhere('transaction_status', 'like', "%{$search}%")
+            //         ->orWhere('transaction_status', 'like', "%{$search}%");
+            //     });
+            // }
 
             // Sort
             switch ($request->get('sort', 'latest')) {
                 case 'oldest':
-                    $query->orderBy('created_at', 'asc');
+                    $query->orderBy('invoice_date', 'asc');
                     break;
                 case 'highest':
                     $query->orderBy('final_total_amount', 'desc');
@@ -66,7 +68,7 @@ class OrderController
                     $query->orderBy('final_total_amount', 'asc');
                     break;
                 default:
-                    $query->orderBy('created_at', 'desc');
+                    $query->orderBy('invoice_date', 'desc');
                     break;
             }
 

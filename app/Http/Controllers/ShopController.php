@@ -6,9 +6,13 @@ use App\Models\Product;
 use App\Models\ProductBrand;
 use Illuminate\Http\Request;
 use App\Models\ProductBundle;
+use App\Services\ML\FpClient;
 use App\Models\SalesTransaction;
 use App\Models\ProductAssociation;
+use App\Models\SalesTransactionItem;
 use Illuminate\Support\Facades\Auth;
+use App\Models\ProductAssociationCustomer;
+use App\Services\RecommendationService;
 
 class ShopController
 {
@@ -17,8 +21,16 @@ class ShopController
         $today = now()->toDateString();
 
         $bundles = ProductBundle::query()->where('is_active', true)->whereDate('start_date', '<=', $today)->whereDate('end_date', '>=', $today)->select('id', 'bundle_name', 'description', 'special_bundle_price', 'original_price', 'start_date', 'end_date', 'flyer')->orderBy('start_date')->limit(8)->get();
+        $discountProducts = Product::query()->whereNot('discount', '<=', 0.0)->get();
 
-        return view('customer.home', compact('bundles'));
+        // Rekomendasi: delegasikan ke service agar function tetap ringkas
+        $recommendedProducts = collect();
+        $user = Auth::user();
+        if ($user && isset($user->customer)) {
+            $recommendedProducts = app(RecommendationService::class)->getRecommendedProductsForCustomer($user->customer, 12);
+        }
+
+        return view('customer.home', compact('bundles', 'discountProducts', 'recommendedProducts'));
     }
 
     public function catalog(Request $request)

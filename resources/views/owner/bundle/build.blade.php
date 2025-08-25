@@ -64,13 +64,13 @@
                         <div class="row g-3">
                             <div class="col-12">
                                 <div class="d-flex flex-column justify-content-center">
-                                    <label for="fileInput" class="text-center mx-auto">
+                                    <label for="fileInput" class="text-center mx-auto" >
                                         <div class="image-upload-container">
                                             {{-- Gambar yang akan menjadi tombol dan preview --}}
                                             <img src="{{ asset('uploads/images/product_bundles/bundle-1.png') }}"
                                                 alt="Gambar Produk" id="productImagePreview"
                                                 class="img-fluid rounded-3 mb-2"
-                                                style="aspect-ratio: 16/9; width: 320px; height: 180px; object-fit: cover; object-position: center; cursor: pointer;">
+                                                style="width: 1114px; height: 200px; object-fit: cover; object-position: center; cursor: pointer;">
                                             {{-- Input file yang disembunyikan --}}
                                             <input type="file" name="flyer" id="fileInput" accept="image/*"
                                                 class="d-none @error('flyer') is-invalid @enderror">

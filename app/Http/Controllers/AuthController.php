@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use App\Services\RecommendationService;
 
 class AuthController
 {
@@ -95,6 +96,17 @@ class AuthController
                     case 'sales':
                         return redirect()->intended('/sales/dashboard')->with('success', 'Login berhasil');
                     case 'customer':
+                        // Recompute asosiasi per-customer agar rekomendasi selalu update
+                        try {
+                            $user = Auth::user();
+                            if (isset($user->customer)) {
+                                \Log::info('Login customer: triggering recompute', ['user_id' => $user->id, 'customer_id' => $user->customer->id]);
+                                app(RecommendationService::class)->recomputeAssociationsForCustomer($user->customer);
+                            }
+                        } catch (\Throwable $e) {
+                            \Log::error('Recompute after login failed', ['error' => $e->getMessage()]);
+                            // Jangan gagalkan login, cukup lanjutkan redirect
+                        }
                         return redirect()->intended('/customer/home')->with('success', 'Login berhasil');
                     default:
                         # code...

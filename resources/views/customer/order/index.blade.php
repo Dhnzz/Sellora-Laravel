@@ -43,7 +43,7 @@
                                 <option value="lowest">Harga Terendah</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        {{-- <div class="col-md-3">
                             <label class="form-label small fw-semibold">Cari</label>
                             <div class="input-group input-group-sm">
                                 <input type="text" id="searchFilter" class="form-control" placeholder="Cari pesanan...">
@@ -51,7 +51,7 @@
                                     <i class="ti ti-x"></i>
                                 </button>
                             </div>
-                        </div>
+                        </div> --}}
                     </div>
                 </div>
             </div>

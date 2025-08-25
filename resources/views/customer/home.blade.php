@@ -15,37 +15,112 @@
         @endforeach
     </div>
 
-    {{-- Section: Bundling Aktif --}}
+    {{-- Section: Diskon Aktif --}}
     <div class="d-flex align-items-center justify-content-between mb-2">
-        <h5 class="mb-0">Bundling Hemat</h5>
+        <h5 class="mb-0">Produk Promo</h5>
         <a href="{{ route('customer.catalog') }}" class="small text-decoration-none">Lihat semua</a>
     </div>
-    <div class="row g-3">
-        @foreach ($bundles as $b)
-            <div class="col-6 col-md-4 col-lg-3">
+    <div class="owl-carousel owl-theme" id="discountProductsCarousel">
+        @foreach ($discountProducts as $item)
+            <div class="item">
                 <div class="card c-card h-100">
-                    <img src="{{ $b->flyer ?? 'https://picsum.photos/600/400?random=' . ($loop->index + 11) }}"
-                        class="card-img-top" alt="{{ $b->bundle_name }}" style="height:160px;object-fit:cover;">
+                    @if ($item->image != 'uploads/images/products/product-1.png')
+                        <img src="{{ asset('storage/' . $item->image) }}" class="card-img-top" alt="{{ $item->name }}"
+                            style="height:160px;object-fit:cover;">
+                    @else
+                        <img src="{{ asset($item->image) }}" class="card-img-top" alt="{{ $item->name }}"
+                            style="height:160px;object-fit:cover;">
+                    @endif
                     <div class="card-body">
-                        <div class="small text-muted mb-1">
-                            {{ \Carbon\Carbon::parse($b->end_date)->isPast() ? 'Berakhir' : 'Berlaku' }} s/d
-                            {{ \Carbon\Carbon::parse($b->end_date)->format('d M Y') }}</div>
-                        <h6 class="card-title mb-1">{{ $b->bundle_name }}</h6>
+                        <h6 class="card-title mb-1">{{ $item->name }}</h6>
+                        <div class="mb-1">
+                            <span class="badge bg-danger me-1">-{{ $item->discount * 100 }}%</span>
+                        </div>
                         <div class="small">
                             <span class="text-decoration-line-through text-muted">Rp
-                                {{ number_format($b->original_price, 0, ',', '.') }}</span>
+                                {{ number_format($item->selling_price, 0, ',', '.') }}</span>
                             <span class="ms-1 text-success fw-semibold">Rp
-                                {{ number_format($b->special_bundle_price, 0, ',', '.') }}</span>
+                                {{ number_format($item->selling_price * $item->discount, 0, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
             </div>
         @endforeach
-        @if (empty($bundles) || count($bundles) === 0)
-            <div class="col-12">
-                <div class="alert alert-light border">Belum ada bundling aktif saat ini.</div>
+    </div>
+
+    {{-- Section: Rekomendasi Untuk Anda --}}
+    @if (isset($recommendedProducts) && $recommendedProducts->isNotEmpty())
+        <div class="d-flex align-items-center justify-content-between mb-2 mt-4">
+            <h5 class="mb-0">Rekomendasi Untuk Anda</h5>
+            <a href="{{ route('customer.catalog') }}" class="small text-decoration-none">Lihat semua</a>
+        </div>
+        <div class="owl-carousel owl-theme" id="recommendedProductsCarousel">
+            @foreach ($recommendedProducts as $item)
+                <div class="item">
+                    <div class="card c-card h-100">
+                        @if ($item->image != 'uploads/images/products/product-1.png')
+                            <img src="{{ asset('storage/' . $item->image) }}" class="card-img-top"
+                                alt="{{ $item->name }}" style="height:160px;object-fit:cover;">
+                        @else
+                            <img src="{{ asset($item->image) }}" class="card-img-top" alt="{{ $item->name }}"
+                                style="height:160px;object-fit:cover;">
+                        @endif
+                        <div class="card-body">
+                            <h6 class="card-title mb-1">{{ $item->name }}</h6>
+                            @if ($item->discount > 0)
+                                <div class="mb-1">
+                                    <span class="badge bg-danger me-1">-{{ $item->discount * 100 }}%</span>
+                                </div>
+                                <div class="small">
+                                    <span class="text-decoration-line-through text-muted">Rp
+                                        {{ number_format($item->selling_price, 0, ',', '.') }}</span>
+                                    <span class="ms-1 text-success fw-semibold">Rp
+                                        {{ number_format($item->selling_price * $item->discount, 0, ',', '.') }}</span>
+                                </div>
+                            @else
+                                <div class="small">
+                                    <span class="fw-semibold">Rp
+                                        {{ number_format($item->selling_price, 0, ',', '.') }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+    {{-- Section: Rekomendasi Pengguna --}}
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="mb-0">Produk Promo</h5>
+        <a href="{{ route('customer.catalog') }}" class="small text-decoration-none">Lihat semua</a>
+    </div>
+    <div class="owl-carousel owl-theme" id="discountProductsCarousel">
+        @foreach ($discountProducts as $item)
+            <div class="item">
+                <div class="card c-card h-100">
+                    @if ($item->image != 'uploads/images/products/product-1.png')
+                        <img src="{{ asset('storage/' . $item->image) }}" class="card-img-top" alt="{{ $item->name }}"
+                            style="height:160px;object-fit:cover;">
+                    @else
+                        <img src="{{ asset($item->image) }}" class="card-img-top" alt="{{ $item->name }}"
+                            style="height:160px;object-fit:cover;">
+                    @endif
+                    <div class="card-body">
+                        <h6 class="card-title mb-1">{{ $item->name }}</h6>
+                        <div class="mb-1">
+                            <span class="badge bg-danger me-1">-{{ $item->discount * 100 }}%</span>
+                        </div>
+                        <div class="small">
+                            <span class="text-decoration-line-through text-muted">Rp
+                                {{ number_format($item->selling_price, 0, ',', '.') }}</span>
+                            <span class="ms-1 text-success fw-semibold">Rp
+                                {{ number_format($item->selling_price * $item->discount, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-        @endif
+        @endforeach
     </div>
 @endsection
 
@@ -69,6 +144,44 @@
                     },
                     1000: {
                         items: 1
+                    }
+                }
+            });
+
+            $('#discountProductsCarousel').owlCarousel({
+                loop: true,
+                margin: 12,
+                nav: false,
+                dots: false,
+                autoplay: false,
+                responsive: {
+                    0: {
+                        items: 2
+                    },
+                    600: {
+                        items: 3
+                    },
+                    1000: {
+                        items: 4
+                    }
+                }
+            });
+
+            $('#recommendedProductsCarousel').owlCarousel({
+                loop: true,
+                margin: 12,
+                nav: false,
+                dots: false,
+                autoplay: false,
+                responsive: {
+                    0: {
+                        items: 2
+                    },
+                    600: {
+                        items: 3
+                    },
+                    1000: {
+                        items: 4
                     }
                 }
             });
