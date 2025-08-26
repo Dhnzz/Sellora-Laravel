@@ -55,7 +55,7 @@
                         </li>
                         <li class="sidebar-item">
                             <a href="{{ route('owner.closing.index') }}"
-                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('owner.closing.*') ||Request::routeIs('owner.predictions.*') ? 'active' : '' }}">
+                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('owner.closing.*') || Request::routeIs('owner.predictions.*') ? 'active' : '' }}">
                                 <i class="ti ti-calendar-check fs-5 me-2"></i>
                                 <span class="hide-menu">Tutup Buku Bulanan</span>
                             </a>
@@ -183,8 +183,8 @@
                             <span class="hide-menu">Transaksi</span>
                         </li>
                         <li class="sidebar-item">
-                            <a href="{{ route('admin.master_data.supplier.index') }}"
-                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.master_data.supplier.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.orders.index') }}"
+                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.orders.*') ? 'active' : '' }}">
                                 <i class="ti ti-clipboard-list fs-5 me-2"></i>
                                 <span class="hide-menu">Pesanan</span>
                             </a>

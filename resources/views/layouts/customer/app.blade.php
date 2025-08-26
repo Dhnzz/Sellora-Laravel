@@ -40,6 +40,7 @@
             z-index: 1030;
             background: #fff;
             border-bottom: 1px solid #eef2f7;
+            max-height: fit-content;
         }
 
         .c-header .brand {
@@ -250,12 +251,12 @@
                         <i class="ti ti-grid-dots me-1"></i> Katalog
                     </a>
 
-                    {{-- Cart Button (offcanvas) --}}
-                    <button class="btn btn-primary position-relative" data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasCart">
+                    {{-- Cart Button --}}
+                    <a href="{{ route('customer.cart.index') }}" class="btn btn-primary position-relative">
                         <i class="ti ti-shopping-cart"></i>
-                        <span id="cartBadge" class="badge badge-cart rounded-pill">0</span>
-                    </button>
+                        <span
+                            class="cart-count badge badge-cart rounded-pill">{{ array_sum(session('cart', [])) }}</span>
+                    </a>
 
                     {{-- Account dropdown --}}
                     <div class="dropdown">
@@ -283,27 +284,7 @@
                 </div>
             </div>
         </div>
-
-        {{-- Category Bar (opsional) --}}
-        <div class="c-catbar d-none d-md-block">
-            <div class="container py-2">
-                <div class="d-flex gap-3 small">
-                    <a href="{{ route('customer.catalog') }}" class="text-decoration-none text-dark">Semua</a>
-                    {{-- contoh kategori statis; nanti ganti dinamis --}}
-                    <a href="{{ route('customer.catalog', ['cat' => 'minuman']) }}"
-                        class="text-decoration-none text-dark">Minuman</a>
-                    <a href="{{ route('customer.catalog', ['cat' => 'makanan']) }}"
-                        class="text-decoration-none text-dark">Makanan</a>
-                    <a href="{{ route('customer.catalog', ['cat' => 'perawatan']) }}"
-                        class="text-decoration-none text-dark">Perawatan</a>
-                    <span class="ms-auto c-chip">Gratis ongkir s&k berlaku</span>
-                </div>
-            </div>
-        </div>
     </header>
-
-    {{-- MINI CART OFFCANVAS --}}
-    @include('layouts.customer.partials.offcanvas-cart')
 
     <main class="container my-4">
         @yield('content')
@@ -351,6 +332,45 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <script>
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-bottom-right", // Lokasi notifikasi
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000", // Notifikasi akan hilang setelah 5 detik
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        };
+
+        // Fungsi helper untuk menampilkan notifikasi dari flash messages
+        $(document).ready(function() {
+            @if (Session::has('success'))
+                toastr.success("{{ Session::get('success') }}");
+            @endif
+
+            @if (Session::has('error'))
+                toastr.error("{{ Session::get('error') }}");
+            @endif
+
+            @if (Session::has('warning'))
+                toastr.warning("{{ Session::get('warning') }}");
+            @endif
+
+            @if (Session::has('info'))
+                toastr.info("{{ Session::get('info') }}");
+            @endif
+        });
+    </script>
 
     {{-- Cart badge sample loader (ganti ke API cart kamu) --}}
     {{-- <script>

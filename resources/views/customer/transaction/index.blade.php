@@ -20,9 +20,9 @@
                             <label class="form-label small fw-semibold">Status Pesanan</label>
                             <select id="statusFilter" class="form-select form-select-sm">
                                 <option value="">Semua Status</option>
+                                <option value="success">Sukses</option>
+                                <option value="process">Diproses</option>
                                 <option value="pending">Menunggu Konfirmasi</option>
-                                <option value="confirmed">Dikonfirmasi</option>
-                                <option value="cancelled">Ditolak</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -166,8 +166,6 @@
                             renderOrders(response.data.orders);
                             renderPagination(response.data.pagination);
                             showEmptyState(response.data.orders.length === 0);
-                            console.log(response.data.orders);
-                            
                         } else {
                             showError('Gagal memuat data pesanan');
                         }
@@ -197,11 +195,17 @@
                 <div class="card c-card mb-3 order-item" data-order-id="${order.id}">
                     <div class="card-body">
                         <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <div class="text-center">
+                                    <div class="small text-muted mb-1">Invoice</div>
+                                    <div class="fw-semibold">#${order.order_number}</div>
+                                </div>
+                            </div>
                             <div class="col-md-3">
                                 <div class="small text-muted mb-1">Tanggal Order</div>
                                 <div>${formatDate(order.order_date)}</div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <div class="small text-muted mb-1">Total</div>
                                 <div class="fw-semibold text-primary">Rp ${formatNumber(order.total_amount)}</div>
                             </div>
@@ -326,9 +330,8 @@
 
             function getStatusBadge(status) {
                 const statusMap = {
-                    'pending': '<span class="badge bg-warning">Menunggu Konfirmasi</span>',
-                    'confirmed': '<span class="badge bg-success">Dikonfirmasi</span>',
-                    'cancelled': '<span class="badge bg-danger">Ditolak</span>',
+                    'success': '<span class="badge bg-success">Sukses</span>',
+                    'process': '<span class="badge bg-warning">Diproses</span>',
                 };
                 return statusMap[status] || '<span class="badge bg-secondary">Unknown</span>';
             }

@@ -20,7 +20,7 @@
         <h5 class="mb-0">Produk Promo</h5>
         <a href="{{ route('customer.catalog') }}" class="small text-decoration-none">Lihat semua</a>
     </div>
-    <div class="owl-carousel owl-theme" id="discountProductsCarousel">
+    <div class="owl-carousel owl-theme mb-5" style="max-height: fit-content" id="discountProductsCarousel">
         @foreach ($discountProducts as $item)
             <div class="item">
                 <div class="card c-card h-100">
@@ -54,7 +54,7 @@
             <h5 class="mb-0">Rekomendasi Untuk Anda</h5>
             <a href="{{ route('customer.catalog') }}" class="small text-decoration-none">Lihat semua</a>
         </div>
-        <div class="owl-carousel owl-theme" id="recommendedProductsCarousel">
+        <div class="owl-carousel owl-theme mb-5" style="max-height: fit-content" id="recommendedProductsCarousel">
             @foreach ($recommendedProducts as $item)
                 <div class="item">
                     <div class="card c-card h-100">
@@ -90,7 +90,7 @@
         </div>
     @endif
 
-    {{-- Section: Rekomendasi Pengguna --}}
+    {{-- Section: Rekomendasi Pengguna
     <div class="d-flex align-items-center justify-content-between mb-2">
         <h5 class="mb-0">Produk Promo</h5>
         <a href="{{ route('customer.catalog') }}" class="small text-decoration-none">Lihat semua</a>
@@ -121,7 +121,7 @@
                 </div>
             </div>
         @endforeach
-    </div>
+    </div> --}}
 @endsection
 
 @push('scripts')

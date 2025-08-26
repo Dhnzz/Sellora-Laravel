@@ -88,34 +88,42 @@ class PurchaseAndSalesSeeder extends Seeder
 
             foreach ($purchaseOrderDates as $orderDate) {
                 $orderDate = $orderDate instanceof \DateTime ? Carbon::instance($orderDate) : $orderDate;
-                $minDelivDate = (clone $orderDate)->addDays(3);
-                $maxDelivDate = (clone $orderDate)->addDays(7);
-                $deliveryDueDate = $faker->dateTimeBetween($minDelivDate, $maxDelivDate);
 
-                $po = PurchaseOrder::create([
-                    'customer_id' => $customers->random()->id,
-                    'order_date' => $orderDate,
-                    'delivery_date' => $deliveryDueDate,
-                    'status' => 'confirmed',
-                ]);
-                $confirmedPurchaseOrders[] = $po;
-
-                // PurchaseOrderItem
-                $itemCount = rand(1, 3);
+                // Hitung dulu item dan totalnya, jangan langsung insert
+                $itemCount = rand(2, 3);
                 $orderedProducts = collect();
                 $poTotal = 0;
+                $poItemsData = [];
                 for ($j = 0; $j < $itemCount; $j++) {
                     $product = $products->whereNotIn('id', $orderedProducts->pluck('id'))->random();
                     $orderedProducts->push($product);
 
                     $qty = rand(1, 5);
-                    PurchaseOrderItem::create([
-                        'purchase_order_id' => $po->id,
+                    $poItemsData[] = [
                         'product_id' => $product->id,
                         'quantity' => $qty,
-                    ]);
+                    ];
                     $poTotal += $qty * $product->selling_price;
                 }
+
+                // Setelah total didapat, baru buat PO dengan total_amount yang benar
+                $po = PurchaseOrder::create([
+                    'customer_id' => $customers->random()->id,
+                    'total_amount' => $poTotal,
+                    'order_date' => $orderDate,
+                    'status' => 'confirmed',
+                ]);
+                $confirmedPurchaseOrders[] = $po;
+
+                // Simpan item ke database
+                foreach ($poItemsData as $itemData) {
+                    PurchaseOrderItem::create([
+                        'purchase_order_id' => $po->id,
+                        'product_id' => $itemData['product_id'],
+                        'quantity' => $itemData['quantity'],
+                    ]);
+                }
+
                 $totalPurchaseOrderAmount += $poTotal;
             }
 

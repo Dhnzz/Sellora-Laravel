@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RoleController;
@@ -24,6 +25,9 @@ use App\Http\Controllers\RevenuePredictionController;
 use App\Http\Controllers\MonthlyBookClosingController;
 use App\Http\Controllers\MonthlyClosingImportController;
 use App\Http\Controllers\MonthlyRevenuePredictionController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\AdminOrderController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -290,6 +294,16 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/profile/update/{admin}', [AdminController::class, 'update'])->name('profile.update');
             Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
+            // Orders Management
+            Route::prefix('orders')
+                ->name('orders.')
+                ->group(function () {
+                    Route::get('/', [AdminOrderController::class, 'index'])->name('index');
+                    Route::get('/{order}', [AdminOrderController::class, 'show'])->name('show');
+                    Route::post('/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('confirm');
+                    Route::post('/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('cancel');
+                });
+
             // Master Data
             Route::prefix('master_data')
                 ->name('master_data.')
@@ -364,6 +378,25 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/home', [ShopController::class, 'home'])->name('home');
             Route::get('/catalog', [ShopController::class, 'catalog'])->name('catalog');
 
+            // Cart routes
+            Route::prefix('cart')
+                ->name('cart.')
+                ->group(function () {
+                    Route::get('/', [CartController::class, 'index'])->name('index');
+                    Route::post('/add', [CartController::class, 'add'])->name('add');
+                    Route::put('/update', [CartController::class, 'update'])->name('update');
+                    Route::delete('/remove', [CartController::class, 'remove'])->name('remove');
+                    Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
+                });
+
+            // Checkout routes
+            Route::prefix('checkout')
+                ->name('checkout.')
+                ->group(function () {
+                    Route::get('/', [CheckoutController::class, 'index'])->name('index');
+                    Route::post('/', [CheckoutController::class, 'store'])->name('store');
+                });
+
             Route::prefix('order')
                 ->name('order.')
                 ->group(function () {
@@ -372,6 +405,14 @@ Route::middleware(['auth'])->group(function () {
                     Route::get('/{id}', [OrderController::class, 'show'])->name('show');
                 });
 
+            Route::prefix('transaction')
+                ->name('transaction.')
+                ->group(function () {
+                    Route::get('/', [TransactionController::class, 'index'])->name('index');
+                    Route::get('/data', [TransactionController::class, 'data'])->name('data');
+                    Route::get('/{id}', [TransactionController::class, 'show'])->name('show');
+                });
+            
             Route::prefix('bundle')
                 ->name('bundle.')
                 ->group(function () {

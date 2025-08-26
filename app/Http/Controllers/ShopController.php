@@ -36,63 +36,63 @@ class ShopController
     public function catalog(Request $request)
     {
         $user = Auth::user();
-
-        // 1) cari produk yang pernah dibeli customer ini
-        // asumsi relasi: sales_transactions -> punya customer_user_id
-        $purchasedIds = SalesTransaction::query()->where('customer_user_id', $user->id)->join('sales_transaction_items', 'sales_transaction_items.sales_transaction_id', '=', 'sales_transactions.id')->pluck('sales_transaction_items.product_id')->unique()->values();
-
-        // 2) kalau ada histori → hitung skor rekomendasi pakai ProductAssociation
+        // Gunakan service rekomendasi yang sama seperti di home
         $recommendedIds = collect();
-
-        if ($purchasedIds->isNotEmpty()) {
-            // ambil asosiasi yang antecedent mengandung salah satu dari produk yang dibeli
-            $assocsQ = ProductAssociation::query();
-            foreach ($purchasedIds as $pid) {
-                $assocsQ->orWhereJsonContains('atecedent_product_ids', (int) $pid); // kolom 'atecedent...' mengikuti schema kamu
-            }
-            $assocs = $assocsQ->get(['consequent_product_ids', 'confidence', 'lift']);
-
-            // agregasi skor
-            $score = [];
-            foreach ($assocs as $a) {
-                $conseq = json_decode($a->consequent_product_ids, true) ?: [];
-                foreach ($conseq as $cid) {
-                    // jangan rekomendasikan produk yg sudah pernah dibeli? (opsional) — di sini tetap direkomendasikan
-                    $score[$cid] = ($score[$cid] ?? 0) + (float) $a->confidence + 0.1 * (float) $a->lift;
-                }
-            }
-
-            if (!empty($score)) {
-                arsort($score); // desc
-                $recommendedIds = collect(array_keys($score))->map(fn($v) => (int) $v);
-            }
+        if ($user && isset($user->customer)) {
+            $recoProducts = app(RecommendationService::class)->getRecommendedProductsForCustomer($user->customer, 200);
+            $recommendedIds = $recoProducts->pluck('id');
         }
 
         // 3) query produk: recommended dulu (urutan custom), lanjut sisanya (terbaru)
-        $baseQ = Product::query()->select('id', 'name', 'selling_price', 'created_at');
+        $baseQ = Product::query()->join('product_brands', 'products.product_brand_id', '=', 'product_brands.id')->select('products.id', 'products.name as product_name', 'product_brands.name as brand_name', 'selling_price', 'discount', 'image', 'product_brand_id', 'products.created_at');
 
         // optional filter (brand, q search, dsb.)
         if ($request->filled('q')) {
             $q = $request->q;
-            $baseQ->where('name', 'like', "%{$q}%");
+            $baseQ->where('products.name', 'like', "%{$q}%")->orWhere('product_brands.name', 'like', "%{$q}%");
         }
 
-        // kalau tidak ada histori: default terbaru
-        if ($recommendedIds->isEmpty()) {
-            $products = $baseQ->orderByDesc('created_at')->paginate(24)->withQueryString();
-            return view('customer.catalog', compact('products'));
+        // filter brand
+        if ($request->filled('brand') && $request->brand !== 'all') {
+            $baseQ->where('product_brands.name', 'like', "%{$request->brand}%");
         }
 
-        // ada rekomendasi → bikin CASE WHEN: yg termasuk rekomendasi ranking=0, lainnya=1
-        // lalu untuk yang ranking=0, jaga urutan pakai FIELD(id, list...)
-        $recommendedList = $recommendedIds->implode(',');
-        $products = $baseQ
-            ->orderByRaw("CASE WHEN id IN ({$recommendedList}) THEN 0 ELSE 1 END ASC")
-            ->orderByRaw("FIELD(id, {$recommendedList})") // urut sesuai skor
-            ->orderByDesc('created_at') // sisanya by newest
-            ->paginate(24)
-            ->withQueryString();
+        if ($request->filled('sortBy') && $request->sortBy !== '') {
+            switch ($request->sortBy) {
+                case 'recommended':
+                    // kalau tidak ada histori: default terbaru
+                    if ($recommendedIds->isEmpty()) {
+                        $baseQ->orderByDesc('created_at');
+                        // $brands = ProductBrand::select('id', 'name')->orderBy('name')->get();
+                        // $selectedBrand = $request->brand_id ?? 'all';
+                        // return view('customer.catalog', compact('products', 'brands', 'selectedBrand'));
+                    } else {
+                        // ada rekomendasi → bikin CASE WHEN: yg termasuk rekomendasi ranking=0, lainnya=1
+                        // lalu untuk yang ranking=0, jaga urutan pakai FIELD(id, list...)
+                        $recommendedList = $recommendedIds->implode(',');
+                        $baseQ
+                            ->orderByRaw("CASE WHEN products.id IN ({$recommendedList}) THEN 0 ELSE 1 END ASC")
+                            ->orderByRaw("FIELD(products.id, {$recommendedList})") // urut sesuai skor
+                            ->orderByDesc('created_at');
+                    }
 
-        return view('customer.catalog', compact('products'));
+                    break;
+                case 'lowestPrice':
+                    $baseQ->orderBy('selling_price', 'asc');
+                    break;
+                case 'highestPrice':
+                    $baseQ->orderByDesc('selling_price');
+                    break;
+                default:
+                    $baseQ->orderBy('product_name', 'asc');
+                    break;
+            }
+        }
+
+        $products = $baseQ->paginate(20)->withQueryString();
+
+        $brands = ProductBrand::select('id', 'name')->orderBy('name')->get();
+        $selectedBrand = $request->brand ?? 'all';
+        return view('customer.catalog', compact('products', 'brands', 'selectedBrand'));
     }
 }
