@@ -3,9 +3,9 @@
         {{-- Order Header --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h6 class="mb-1">Order #{{ $orderData->order_number }}</h6>
+                <h6 class="mb-1">Order #</h6>
                 <small
-                    class="text-muted">{{ \Carbon\Carbon::parse($orderData->created_at)->format('d M Y H:i') }}</small>
+                    class="text-muted">{{ \Carbon\Carbon::parse($orderData->order_date)->format('d M Y H:i') }}</small>
             </div>
             <div class="text-end">
                 <div class="fw-semibold text-primary">Rp {{ number_format($orderData->total_amount, 0, ',', '.') }}</div>
@@ -51,12 +51,14 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover table-bordered table-sm mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>Produk</th>
+                                <th class="text-center">Harga</th>
+                                <th class="text-center">Diskon Produk</th>
+                                <th class="text-center">Harga Net</th>
                                 <th class="text-center">Qty</th>
-                                <th class="text-end">Harga</th>
                                 <th class="text-end">Subtotal</th>
                             </tr>
                         </thead>
@@ -76,8 +78,10 @@
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="text-center">{{ $item->quantity }}</td>
                                         <td class="text-end">Rp {{ number_format($item->price, 0, ',', '.') }}</td>
+                                        <td class="text-center">{{ $item->product->discount > 0.00 ? $item->product->discount * 100 . '%' : '-' }}</td>
+                                        <td class="text-center">Rp. {{ number_format($item->net_price, 0, ',', '.') }}</td>
+                                        <td class="text-center">{{ $item->quantity }}</td>
                                         <td class="text-end fw-semibold">Rp
                                             {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                                     </tr>
@@ -102,55 +106,19 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Subtotal:</span>
-                            <span>Rp {{ number_format($orderData->subtotal, 0, ',', '.') }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Ongkos Kirim:</span>
-                            <span>Rp {{ number_format($orderData->shipping_cost ?? 0, 0, ',', '.') }}</span>
-                        </div>
-                        @if ($orderData->discount_amount > 0)
-                            <div class="d-flex justify-content-between mb-2 text-success">
-                                <span>Diskon:</span>
-                                <span>- Rp {{ number_format($orderData->discount_amount, 0, ',', '.') }}</span>
-                            </div>
-                        @endif
-                        <hr>
+                    <div class="col-md-12">
                         <div class="d-flex justify-content-between fw-semibold">
                             <span>Total:</span>
                             <span class="text-primary">Rp
                                 {{ number_format($orderData->total_amount, 0, ',', '.') }}</span>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="mb-2">
-                            <small class="text-muted">Metode Pembayaran:</small>
-                            <div class="fw-semibold">{{ $orderData->payment_method ?? 'Transfer Bank' }}</div>
-                        </div>
-                        <div class="mb-2">
-                            <small class="text-muted">Status Pembayaran:</small>
-                            <div>{!! getPaymentStatusBadge($orderData->payment_status ?? 'pending') !!}</div>
-                        </div>
-                        @if ($orderData->payment_proof)
-                            <div class="mb-2">
-                                <small class="text-muted">Bukti Pembayaran:</small>
-                                <div>
-                                    <a href="{{ asset($orderData->payment_proof) }}" target="_blank"
-                                        class="btn btn-sm btn-outline-primary">
-                                        <i class="ti ti-download me-1"></i> Lihat Bukti
-                                    </a>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
                 </div>
             </div>
         </div>
 
         {{-- Order Timeline --}}
-        <div class="card c-card">
+        {{-- <div class="card c-card">
             <div class="card-header bg-light">
                 <h6 class="mb-0"><i class="ti ti-timeline me-2"></i>Timeline Pesanan</h6>
             </div>
@@ -221,7 +189,7 @@
                     @endforeach
                 </div>
             </div>
-        </div>
+        </div> --}}
     </div>
 </div>
 
@@ -229,12 +197,9 @@
     function getStatusBadge($status)
     {
         $statusMap = [
-            'pending' => '<span class="badge bg-warning">Menunggu Pembayaran</span>',
-            'paid' => '<span class="badge bg-info">Sudah Dibayar</span>',
-            'processing' => '<span class="badge bg-primary">Sedang Diproses</span>',
-            'shipped' => '<span class="badge bg-success">Dikirim</span>',
-            'delivered' => '<span class="badge bg-success">Diterima</span>',
-            'cancelled' => '<span class="badge bg-danger">Dibatalkan</span>',
+            'pending' => '<span class="badge bg-warning">Menunggu Konfirmasi</span>',
+            'confirmed' => '<span class="badge bg-success">Dikonfirmasi</span>',
+            'cancelled' => '<span class="badge bg-danger">Ditolak</span>',
         ];
         return $statusMap[$status] ?? '<span class="badge bg-secondary">Unknown</span>';
     }

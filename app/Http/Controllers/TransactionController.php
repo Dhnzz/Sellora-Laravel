@@ -11,7 +11,7 @@ class TransactionController
 {
     public function index()
     {
-        return view('customer.order.index');
+        return view('customer.transaction.index');
     }
 
     public function data(Request $request)

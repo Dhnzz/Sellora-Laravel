@@ -30,8 +30,7 @@ class OrderController
             }
 
             // Base query untuk order customer melalui purchase_order
-            $query = PurchaseOrder::where('customer_id', $customer->id)
-                ->with(['purchase_order_items.product.product_brand']);
+            $query = PurchaseOrder::where('customer_id', $customer->id)->with(['purchase_order_items.product.product_brand']);
 
             // Filter by status
             if ($request->filled('status')) {
@@ -101,7 +100,7 @@ class OrderController
                             ],
                             'quantity' => $item->quantity,
                             'price' => $item->product->selling_price,
-                            'net_price' => ($item->product->discount > 0.00 ? $item->product->selling_price * $item->product->discount : $item->product->selling_price), 
+                            'net_price' => $item->product->discount > 0.0 ? $item->product->selling_price * $item->product->discount : $item->product->selling_price,
                             'subtotal' => $item->quantity * $item->product->selling_price,
                         ];
                     }),
@@ -149,11 +148,9 @@ class OrderController
                 );
             }
 
-            $order = SalesTransaction::where('id', $id)
-                ->whereHas('purchase_order', function ($q) use ($customer) {
-                    $q->where('customer_id', $customer->id);
-                })
-                ->with(['purchase_order.customer.user', 'sales_transaction_items.product.brand'])
+            $order = PurchaseOrder::where('id', $id)
+                ->where('customer_id', $customer->id)
+                ->with(['customer.user', 'purchase_order_items.product.product_brand'])
                 ->first();
 
             if (!$order) {
@@ -169,39 +166,32 @@ class OrderController
             // Transform order data
             $orderData = (object) [
                 'id' => $order->id,
-                'order_number' => $order->invoice_id,
-                'status' => $order->transaction_status,
-                'total_amount' => $order->final_total_amount,
-                'subtotal' => $order->initial_total_amount,
-                'shipping_cost' => 0, // Sesuaikan dengan field yang ada
-                'discount_amount' => $order->initial_total_amount - $order->final_total_amount,
-                'payment_method' => 'Transfer Bank', // Default payment method
-                'payment_status' => $order->transaction_status === 'success' ? 'paid' : 'pending',
-                'payment_proof' => null, // Tidak ada field payment_proof di model
-                'shipping_address' => $order->purchase_order->customer->address ?? null,
+                'order_date' => $order->order_date,
+                'status' => $order->status,
+                'total_amount' => $order->total_amount,
+                'shipping_address' => $order->customer->address ?? null,
                 'created_at' => $order->created_at,
-                'payment_confirmed_at' => $order->transaction_status === 'success' ? $order->delivery_confirmed_at : null,
-                'processing_at' => $order->created_at,
-                'shipped_at' => $order->delivery_confirmed_at,
-                'delivered_at' => $order->delivery_confirmed_at,
                 'customer' => (object) [
-                    'name' => $order->purchase_order->customer->name ?? 'Unknown',
-                    'email' => $order->purchase_order->customer->user->email ?? 'Unknown',
-                    'phone' => $order->purchase_order->customer->phone ?? null,
+                    'name' => $order->customer->name ?? 'Unknown',
+                    'email' => $order->customer->user->email ?? 'Unknown',
+                    'phone' => $order->customer->phone ?? null,
                 ],
-                'orderItems' => $order->sales_transaction_items->map(function ($item) {
+                'orderItems' => $order->purchase_order_items->map(function ($item) {
+                    $net_price = $item->product->discount > 0.0 ? $item->product->selling_price * $item->product->discount : $item->product->selling_price;
                     return (object) [
                         'id' => $item->id,
                         'product' => (object) [
                             'name' => $item->product->name ?? 'Unknown Product',
+                            'discount' => $item->product->discount ?? null,
                             'image' => $item->product->image ?? null,
                             'brand' => (object) [
-                                'name' => $item->product->brand->name ?? 'No Brand',
+                                'name' => $item->product->product_brand->name ?? 'No Brand',
                             ],
                         ],
-                        'quantity' => $item->quantity_sold,
-                        'price' => $item->msu_price,
-                        'subtotal' => $item->quantity_sold * $item->msu_price,
+                        'quantity' => $item->quantity,
+                        'price' => $item->product->selling_price,
+                        'net_price' => $net_price,
+                        'subtotal' => $item->quantity * $net_price,
                     ];
                 }),
             ];

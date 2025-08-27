@@ -267,8 +267,8 @@
                             <li><a class="dropdown-item" href="{{ route('customer.order.index') }}"><i
                                         class="ti ti-receipt me-2"></i>Pesanan
                                     Saya</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="ti ti-heart me-2"></i>Wishlist</a>
-                            </li>
+                            <li><a class="dropdown-item" href="{{ route('customer.transaction.index') }}"><i
+                                        class="ti ti-history me-2"></i>Riwayat Transaksi</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>

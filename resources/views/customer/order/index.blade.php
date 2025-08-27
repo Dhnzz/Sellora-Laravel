@@ -213,11 +213,6 @@
                                 <button class="btn btn-outline-primary btn-sm view-detail" data-order-id="${order.id}">
                                     <i class="ti ti-eye me-1"></i> Detail
                                 </button>
-                                ${order.status === 'delivered' ? `
-                                                <button class="btn btn-success btn-sm ms-1" onclick="reviewOrder(${order.id})">
-                                                    <i class="ti ti-star me-1"></i> Review
-                                                </button>
-                                            ` : ''}
                             </div>
                         </div>
                     </div>

@@ -6,7 +6,7 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex align-items-center justify-content-between mb-4">
-                <h4 class="mb-0">Pesanan Saya</h4>
+                <h4 class="mb-0">Transaksi Saya</h4>
                 <a href="{{ route('customer.catalog') }}" class="btn btn-outline-primary">
                     <i class="ti ti-plus me-1"></i> Belanja Lagi
                 </a>
@@ -17,12 +17,11 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Status Pesanan</label>
+                            <label class="form-label small fw-semibold">Status Transaksi</label>
                             <select id="statusFilter" class="form-select form-select-sm">
                                 <option value="">Semua Status</option>
                                 <option value="success">Sukses</option>
                                 <option value="process">Diproses</option>
-                                <option value="pending">Menunggu Konfirmasi</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -158,7 +157,7 @@
                 };
 
                 $.ajax({
-                    url: '{{ route('customer.order.data') }}',
+                    url: '{{ route('customer.transaction.data') }}',
                     method: 'GET',
                     data: filters,
                     success: function(response) {
@@ -166,6 +165,8 @@
                             renderOrders(response.data.orders);
                             renderPagination(response.data.pagination);
                             showEmptyState(response.data.orders.length === 0);
+                            console.log(response.data.orders);
+                            
                         } else {
                             showError('Gagal memuat data pesanan');
                         }
