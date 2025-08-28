@@ -267,9 +267,6 @@
                             <li><a class="dropdown-item" href="{{ route('customer.order.index') }}"><i
                                         class="ti ti-receipt me-2"></i>Pesanan
                                     Saya</a></li>
-                            <li><a class="dropdown-item" href="{{ route('customer.transaction.index') }}"><i
-                                        class="ti ti-history me-2"></i>Riwayat Transaksi</a></li>
-                            <li>
                                 <hr class="dropdown-divider">
                             </li>
                             <li>
@@ -337,14 +334,14 @@
         toastr.options = {
             "closeButton": true,
             "debug": false,
-            "newestOnTop": true,
+            "newestOnTop": false,
             "progressBar": true,
             "positionClass": "toast-bottom-right", // Lokasi notifikasi
             "preventDuplicates": false,
             "onclick": null,
             "showDuration": "300",
             "hideDuration": "1000",
-            "timeOut": "5000", // Notifikasi akan hilang setelah 5 detik
+            "timeOut": "3000", // Notifikasi akan hilang setelah 5 detik
             "extendedTimeOut": "1000",
             "showEasing": "swing",
             "hideEasing": "linear",

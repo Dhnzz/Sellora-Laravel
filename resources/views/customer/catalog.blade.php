@@ -87,14 +87,14 @@
                                 <div class="small text-muted mb-1">{{ $p->brand_name }}</div>
                                 <h6 class="card-title mb-1">{{ $p->product_name }}</h6>
                                 @if ($p->discount > 0)
-                                    <div class="mb-1">
-                                        <span class="badge bg-danger">-{{ $p->discount * 100 }}%</span>
-                                    </div>
                                     <div class="small">
                                         <span class="text-decoration-line-through text-muted">Rp
                                             {{ number_format($p->selling_price, 0, ',', '.') }}</span>
                                         <span class="ms-1 text-success fw-semibold">Rp
                                             {{ number_format($p->selling_price * $p->discount, 0, ',', '.') }}</span>
+                                    </div>
+                                    <div class="mb-1">
+                                        <span class="badge bg-danger">Diskon {{ $p->discount * 100 }}%</span>
                                     </div>
                                 @else
                                     <div class="small fw-semibold">Rp {{ number_format($p->selling_price, 0, ',', '.') }}

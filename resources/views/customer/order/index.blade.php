@@ -23,6 +23,7 @@
                                 <option value="pending">Menunggu Konfirmasi</option>
                                 <option value="confirmed">Dikonfirmasi</option>
                                 <option value="cancelled">Ditolak</option>
+                                <option value="success">Berhasil</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -99,10 +100,7 @@
                     {{-- Order detail content will be loaded here --}}
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                    <button type="button" class="btn btn-primary" id="printOrder">
-                        <i class="ti ti-printer me-1"></i> Cetak
-                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
@@ -167,13 +165,14 @@
                             renderPagination(response.data.pagination);
                             showEmptyState(response.data.orders.length === 0);
                             console.log(response.data.orders);
-                            
+
                         } else {
                             showError('Gagal memuat data pesanan');
                         }
                     },
-                    error: function() {
+                    error: function(response) {
                         showError('Terjadi kesalahan saat memuat data');
+                        
                     },
                     complete: function() {
                         isLoading = false;
@@ -194,14 +193,22 @@
                 let html = '';
                 orders.forEach(function(order) {
                     html += `
-                <div class="card c-card mb-3 order-item" data-order-id="${order.id}">
+                <div class="card c-card mb-3 order-item" data-order-id="${order.id}" data-order-type="${order.type}">
                     <div class="card-body">
                         <div class="row align-items-center">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <div class="small text-muted mb-1">Tipe</div>
+                                <div>${getTypeBadge(order.type)}</div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="small text-muted mb-1">No. Order</div>
+                                <div class="fw-semibold">${order.order_number || '-'}</div>
+                            </div>
+                            <div class="col-md-2">
                                 <div class="small text-muted mb-1">Tanggal Order</div>
                                 <div>${formatDate(order.order_date)}</div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="small text-muted mb-1">Total</div>
                                 <div class="fw-semibold text-primary">Rp ${formatNumber(order.total_amount)}</div>
                             </div>
@@ -209,8 +216,8 @@
                                 <div class="small text-muted mb-1">Status</div>
                                 <div>${getStatusBadge(order.status)}</div>
                             </div>
-                            <div class="col-md-3 text-end">
-                                <button class="btn btn-outline-primary btn-sm view-detail" data-order-id="${order.id}">
+                            <div class="col-md-1 text-end">
+                                <button class="btn btn-outline-primary btn-sm view-detail" data-order-id="${order.id}" data-order-type="${order.type}">
                                     <i class="ti ti-eye me-1"></i> Detail
                                 </button>
                             </div>
@@ -283,13 +290,15 @@
             // View order detail
             $(document).on('click', '.view-detail', function() {
                 const orderId = $(this).data('order-id');
-                loadOrderDetail(orderId);
+                const orderType = $(this).data('order-type');
+                loadOrderDetail(orderId, orderType);
             });
 
             // Load order detail
-            function loadOrderDetail(orderId) {
+            function loadOrderDetail(orderId, orderType) {
+                const url = '{{ url('customer/order') }}/' + orderId + (orderType ? '?type=' + orderType : '');
                 $.ajax({
-                    url: '{{ url('customer/order') }}/' + orderId,
+                    url: url,
                     method: 'GET',
                     success: function(response) {
                         if (response.success) {
@@ -322,10 +331,19 @@
             function getStatusBadge(status) {
                 const statusMap = {
                     'pending': '<span class="badge bg-warning">Menunggu Konfirmasi</span>',
-                    'confirmed': '<span class="badge bg-success">Dikonfirmasi</span>',
+                    'confirmed': '<span class="badge bg-info">Dikonfirmasi</span>',
                     'cancelled': '<span class="badge bg-danger">Ditolak</span>',
+                    'success': '<span class="badge bg-success">Berhasil</span>',
                 };
                 return statusMap[status] || '<span class="badge bg-secondary">Unknown</span>';
+            }
+
+            function getTypeBadge(type) {
+                const typeMap = {
+                    'po': '<span class="badge bg-primary">Pesanan</span>',
+                    'st': '<span class="badge bg-success">Transaksi</span>',
+                };
+                return typeMap[type] || '<span class="badge bg-secondary">Unknown</span>';
             }
 
             function showLoading(show) {

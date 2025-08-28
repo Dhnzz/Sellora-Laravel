@@ -13,7 +13,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SalesTransaction extends Model
 {
-    protected $fillable = ['purchase_order_id', 'admin_id', 'sales_agent_id', 'invoice_id', 'invoice_date', 'discount_percent', 'initial_total_amount', 'final_total_amount', 'note', 'transaction_status', 'delivery_confirmed_at'];
+    protected $fillable = [
+        'purchase_order_id',
+        'admin_id',
+        'sales_agent_id',
+        'invoice_id',
+        'invoice_date',
+        'discount_percent',
+        'initial_total_amount',
+        'final_total_amount',
+        'note',
+        'transaction_status',
+        'delivery_confirmed_at'
+    ];
 
     public function purchase_order(): BelongsTo
     {

@@ -44,7 +44,7 @@ Route::get('/', function () {
             case 'sales':
                 return redirect()->intended('/sales/dashboard')->with('success', 'Login berhasil');
             case 'customer':
-                return redirect()->intended('/customer')->with('success', 'Login berhasil');
+                return redirect()->intended('/customer/home')->with('success', 'Login berhasil');
             default:
                 # code...
                 break;
@@ -405,14 +405,6 @@ Route::middleware(['auth'])->group(function () {
                     Route::get('/{id}', [OrderController::class, 'show'])->name('show');
                 });
 
-            Route::prefix('transaction')
-                ->name('transaction.')
-                ->group(function () {
-                    Route::get('/', [TransactionController::class, 'index'])->name('index');
-                    Route::get('/data', [TransactionController::class, 'data'])->name('data');
-                    Route::get('/{id}', [TransactionController::class, 'show'])->name('show');
-                });
-            
             Route::prefix('bundle')
                 ->name('bundle.')
                 ->group(function () {
