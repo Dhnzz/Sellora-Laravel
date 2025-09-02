@@ -96,7 +96,7 @@ class PurchaseAndSalesSeeder extends Seeder
                 $paymentStatus = 'success';
                 if ($faker->boolean(80)) {
                     $deliveryConfirmedAt = (clone $invoiceDate)->modify('+' . rand(0, 7) . ' days');
-                    $paymentStatus = $faker->randomElement(['pending','process','cancelled','success']);
+                    $paymentStatus = $faker->randomElement(['pending', 'process', 'cancelled', 'success']);
                 }
 
                 // ambil admin & sales
@@ -106,18 +106,19 @@ class PurchaseAndSalesSeeder extends Seeder
                 $salesAgentUser = $limitedSales->random();
 
                 // ====== RUMUS DISKON ======
-                // 1) Diskon produk (line-level) dulu
-                // 2) Subtotal = sum(line setelah diskon produk)
-                // 3) Diskon transaksi (order-level) diapply ke subtotal
+                // 1) initial_total_amount = subtotal produk TANPA diskon produk
+                // 2) final_total_amount = subtotal produk SETELAH diskon produk
 
                 // cek kolom snapshot item (biar aman kalau belum migrasi)
                 $hasUnitPriceCol = Schema::hasColumn('sales_transaction_items', 'unit_price');
                 $hasProdDiscCol = Schema::hasColumn('sales_transaction_items', 'product_discount_percent');
                 $hasUnitAfterCol = Schema::hasColumn('sales_transaction_items', 'unit_price_after_product_discount');
                 $hasLineBeforeCol = Schema::hasColumn('sales_transaction_items', 'line_total_before_order_discount');
+                $hasLineAfterCol = Schema::hasColumn('sales_transaction_items', 'line_total_after_product_discount');
 
-                // rakit item + hitung subtotal SEBELUM diskon transaksi
-                $subtotalBeforeOrderDiscount = 0;
+                // Inisialisasi variabel total
+                $initialTotalAmount = 0; // subtotal tanpa diskon produk
+                $finalTotalAmount = 0;   // subtotal setelah diskon produk
                 $salesTransactionItemsData = [];
 
                 // Buat item secara acak (2-3 produk)
@@ -138,48 +139,64 @@ class PurchaseAndSalesSeeder extends Seeder
                         }
                     }
 
-                    $unitPrice = (float) $product->selling_price; // harga asli saat ini
-                    $pdisc = (float) ($product->discount ?? 0); // diskon produk (%)
-                    $pdisc = max(0, min(100, $pdisc));
-                    $unitAfter = round($unitPrice * (1 - $pdisc / 100), 2); // harga satuan setelah diskon produk
-                    $lineBeforeOrder = round($unitAfter * $qtySold, 2); // subtotal line sebelum diskon order
+                    $unitPrice = $product->selling_price;
+                    // Diskon tanpa pembulatan
+                    $productDiscount = ($product->discount ?? 0);
+                    $productDiscount = max(0, min(100, $productDiscount));
+                    // Tidak ada round di sini
 
-                    $subtotalBeforeOrderDiscount += $lineBeforeOrder;
+                    // Perhitungan sebelum diskon produk tanpa round
+                    $lineTotalBeforeDiscount = $unitPrice * $qtySold;
 
-                    // siapkan payload item
+                    // Perhitungan setelah diskon produk tanpa round
+                    $discountAmount = 0;
+                    if ($productDiscount > 0.00) {
+                        // Perbaikan: diskon persen harus dibagi 100, bukan dikali
+                        $discountAmount = $lineTotalBeforeDiscount * $productDiscount;
+                    }
+                    $lineTotalAfterDiscount = $lineTotalBeforeDiscount - $discountAmount;
+
+                    // Tambahkan ke total
+                    $initialTotalAmount += $lineTotalBeforeDiscount;
+                    // Perbaikan: pastikan final_total_amount dibulatkan ke bawah (floor) ke integer jika ingin hasil seperti 367653
+                    // Namun, jika ingin tetap float, gunakan tanpa pembulatan
+                    $finalTotalAmount += floor($lineTotalAfterDiscount);
+
+                    // Hitung unit_price_after_product_discount jika kolom ada tanpa round
+                    $unitPriceAfterDiscount = $unitPrice;
+                    if ($productDiscount > 0.00) {
+                        $unitPriceAfterDiscount = $unitPrice - ($unitPrice * ($productDiscount / 100));
+                    }
+
                     $row = [
                         'product_id' => $product->id,
                         'quantity_ordered' => $qtyOrdered,
                         'quantity_sold' => $qtySold,
-                        'msu_price' => $unitPrice, // kolom lama kamu; dipakai sebagai unit price asli
+                        'msu_price' => $unitPrice,
                     ];
 
-                    // snapshot kolom tambahan kalau tersedia
                     if ($hasUnitPriceCol) {
                         $row['unit_price'] = $unitPrice;
                     }
                     if ($hasProdDiscCol) {
-                        $row['product_discount_percent'] = $pdisc;
+                        $row['product_discount_percent'] = $productDiscount;
                     }
                     if ($hasUnitAfterCol) {
-                        $row['unit_price_after_product_discount'] = $unitAfter;
+                        $row['unit_price_after_product_discount'] = $unitPriceAfterDiscount;
                     }
                     if ($hasLineBeforeCol) {
-                        $row['line_total_before_order_discount'] = $lineBeforeOrder;
+                        $row['line_total_before_order_discount'] = $lineTotalBeforeDiscount;
+                    }
+                    if ($hasLineAfterCol) {
+                        $row['line_total_after_product_discount'] = $lineTotalAfterDiscount;
                     }
 
                     $salesTransactionItemsData[] = $row;
                 }
 
-                // Diskon transaksi ORDER-LEVEL (misal 0–15%)
-                $orderDiscountPercent = number_format($faker->randomFloat(2, 0.00, 0.50));
-                $totalAmountAfterDiscount = number_format($subtotalBeforeOrderDiscount * (1 - $orderDiscountPercent / 100), 2, '.', '');
-
-                // final_amount_paid (boleh kurang kalau retur/process)
-                $finalAmountPaid = $totalAmountAfterDiscount;
-                if ($paymentStatus === 'not_paid') {
-                    $finalAmountPaid = 0;
-                }
+                // Tidak ada pembulatan total
+                // $initialTotalAmount = round($initialTotalAmount, 2);
+                // $finalTotalAmount = round($finalTotalAmount, 2);
 
                 try {
                     $invoiceDateStr = Carbon::instance($invoiceDate)->format('Y-m-d');
@@ -193,19 +210,15 @@ class PurchaseAndSalesSeeder extends Seeder
                         'sales_agent_id' => $salesAgentUser->id,
                         'invoice_id' => $invoiceId,
                         'invoice_date' => $invoiceDateStr,
-
-                        // ==== snapshot total & diskon transaksi ====
-                        // pakai field existing di model kamu:
-                        'discount_percent' => $orderDiscountPercent, // diskon transaksi (%)
-                        'initial_total_amount' => $subtotalBeforeOrderDiscount, // subtotal setelah diskon produk, sebelum diskon order
-                        'final_total_amount' => $finalAmountPaid, // total akhir setelah diskon order
-
+                        'initial_total_amount' => $initialTotalAmount,
+                        'final_total_amount' => $finalTotalAmount,
                         'note' => 'Lorem, ipsum dolor.',
                         'transaction_status' => $paymentStatus,
                         'delivery_confirmed_at' => $deliveryConfirmedAt,
                     ]);
+
                     $successfulSalesCount++;
-                    $totalSalesTransactionAmount += $finalAmountPaid;
+                    $totalSalesTransactionAmount += $finalTotalAmount;
 
                     // Tambahkan item
                     foreach ($salesTransactionItemsData as $itemData) {

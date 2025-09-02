@@ -79,10 +79,10 @@ class AdminOrderController
                 ->make(true);
         }
     }
-    
+
     /**
      * Menampilkan detail pesanan dalam format JSON untuk modal
-     * 
+     *
      * @param Request $request
      * @param int $order ID pesanan
      * @return \Illuminate\Http\JsonResponse
@@ -91,13 +91,8 @@ class AdminOrderController
     {
         if ($request->ajax()) {
             // Ambil data transaksi dengan relasi yang dibutuhkan
-            $transaction = SalesTransaction::with([
-                'customer',
-                'sales_agent',
-                'sales_transaction_items.product.product_unit',
-                'sales_transaction_items.product.product_brand'
-            ])->findOrFail($order);
-            
+            $transaction = SalesTransaction::with(['customer', 'sales_agent', 'sales_transaction_items.product.product_unit', 'sales_transaction_items.product.product_brand'])->findOrFail($order);
+
             // Format data untuk ditampilkan di modal
             $formattedData = [
                 'id' => $transaction->id,
@@ -111,16 +106,15 @@ class AdminOrderController
                 'order_date' => Carbon::parse($transaction->order_date)->format('d/m/Y'),
                 'invoice_date' => Carbon::parse($transaction->invoice_date)->format('d/m/Y'),
                 'delivery_confirmed_at' => $transaction->delivery_confirmed_at ? Carbon::parse($transaction->delivery_confirmed_at)->format('d/m/Y') : 'N/A',
-                'discount_percent' => $transaction->discount_percent * 100,
                 'initial_total_amount' => 'Rp ' . number_format($transaction->initial_total_amount, 0, ',', '.'),
                 'final_total_amount' => 'Rp ' . number_format($transaction->final_total_amount, 0, ',', '.'),
                 'note' => $transaction->note,
                 'status' => $transaction->transaction_status,
                 'status_label' => $this->getStatusLabel($transaction->transaction_status),
                 'cancel_note' => $transaction->cancel_note,
-                'items' => []
+                'items' => [],
             ];
-            
+
             // Format data item pesanan
             foreach ($transaction->sales_transaction_items as $item) {
                 $formattedData['items'][] = [
@@ -130,23 +124,23 @@ class AdminOrderController
                     'unit' => $item->product->product_unit->name,
                     'discount' => $item->product->discount,
                     'price' => 'Rp ' . number_format($item->msu_price, 0, ',', '.'),
-                    'subtotal' => 'Rp ' . number_format($item->product->discount > 0.00 ? ($item->msu_price - ($item->msu_price * $item->product->discount)) * $item->quantity_sold : $item->quantity_sold * $item->msu_price, 0, ',', '.'),
+                    'subtotal' => 'Rp ' . number_format($item->product->discount > 0.0 ? ($item->msu_price - $item->msu_price * $item->product->discount) * $item->quantity_sold : $item->quantity_sold * $item->msu_price, 0, ',', '.'),
                 ];
             }
-            
+
             return response()->json([
                 'success' => true,
-                'data' => $formattedData
+                'data' => $formattedData,
             ]);
         }
-        
+
         // Jika bukan request AJAX, redirect ke halaman index
         return redirect()->route('admin.orders.index');
     }
-    
+
     /**
      * Mendapatkan label status dalam format HTML
-     * 
+     *
      * @param string $status
      * @return string
      */
@@ -161,7 +155,7 @@ class AdminOrderController
         } elseif ($status === 'cancelled') {
             return '<span class="badge bg-danger">Dibatalkan</span>';
         }
-        
+
         return '<span class="badge bg-secondary">Unknown</span>';
     }
 }

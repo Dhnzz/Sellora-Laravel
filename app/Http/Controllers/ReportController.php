@@ -150,7 +150,7 @@ class ReportController
             2 => 'c.name',
             3 => 'sa.name',
             4 => 'st.initial_total_amount',
-            5 => 'discount_percent', // alias, kita hitung manual
+            5 => 'discount_amount_alias', // alias jumlah diskon (initial - final)
             7 => 'return_amount_alias', // alias
             8 => 'st.final_total_amount',
             9 => 'st.transaction_status',
@@ -188,16 +188,16 @@ class ReportController
             COALESCE(c.name,"-")  as customer,
             COALESCE(sa.name,"-") as sales,
             st.initial_total_amount as subtotal,
-            st.discount_percent,
+            (st.initial_total_amount - st.final_total_amount) as discount_amount_alias,
             0 as tax_amount,           -- kalau ada kolom pajak, ganti di sini
             0 as return_amount_alias,  -- kalau mau, isi dari tabel retur per invoice
             st.final_total_amount as total,
             st.transaction_status as status
         ',
             )
-            ->when($orderBy === 'discount_percent', fn($q) => $q->orderByRaw('(st.initial_total_amount - st.final_total_amount) ' . $orderDir))
+            ->when($orderBy === 'discount_amount_alias', fn($q) => $q->orderByRaw('(st.initial_total_amount - st.final_total_amount) ' . $orderDir))
             ->when($orderBy === 'return_amount_alias', fn($q) => $q->orderByRaw('0 ' . $orderDir)) // placeholder, ganti kalau sudah ada nilai retur per invoice
-            ->when(!in_array($orderBy, ['discount_percent']), fn($q) => $q->orderBy($orderBy, $orderDir))
+            ->when(!in_array($orderBy, ['discount_amount_alias']), fn($q) => $q->orderBy($orderBy, $orderDir))
             ->skip($start)
             ->take($length)
             ->get();
@@ -212,7 +212,7 @@ class ReportController
                 'customer' => $r->customer,
                 'sales' => $r->sales,
                 'subtotal' => (float) $r->subtotal,
-                'discount' => (float) $r->discount_percent,
+                'discount' => (float) $r->discount_amount_alias,
                 'retur' => (float) $r->return_amount_alias,
                 'total' => (float) $r->total,
                 'status' => $r->status,

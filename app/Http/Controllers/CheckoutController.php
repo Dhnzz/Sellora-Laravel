@@ -76,7 +76,6 @@ class CheckoutController
                 'order_date' => $invoiceDate->format('Y-m-d'),
                 'invoice_id' => $invoiceId,
                 'invoice_date' => $invoiceDate->format('Y-m-d'),
-                'discount_percent' => 0, // Tidak ada diskon tambahan
                 'initial_total_amount' => $total_amount,
                 'final_total_amount' => $total_amount,
                 'note' => 'Pesanan dari customer',

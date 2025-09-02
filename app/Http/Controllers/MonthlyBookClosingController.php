@@ -229,7 +229,6 @@ class MonthlyBookClosingController
                 "
             st.id,
             COALESCE(SUM(COALESCE(sti.quantity_sold,0) * COALESCE(sti.msu_price,0)), 0) AS gross_items,
-            MAX(COALESCE(st.discount_percent, 0)) AS discount_percent,
             MAX(COALESCE(st.initial_total_amount, 0)) AS initial_total_amount,
             MAX(COALESCE(st.final_total_amount, 0)) AS final_total_amount
         ",
@@ -241,12 +240,9 @@ class MonthlyBookClosingController
         foreach ($rows as $r) {
             $gross = (float) $r->gross_items;
             $final = (float) $r->final_total_amount;
-            $discPc = (float) $r->discount_percent;
 
             if ($final > 0) {
                 $net = $final;
-            } elseif ($discPc > 0) {
-                $net = $gross * (1 - $discPc / 100);
             } else {
                 $net = $gross;
             }

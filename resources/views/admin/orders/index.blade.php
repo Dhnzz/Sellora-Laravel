@@ -129,10 +129,6 @@
                             <div class="col-md-6">
                                 <table class="table table-sm">
                                     <tr>
-                                        <td>Diskon</td>
-                                        <td>: <span id="discount-percent"></span>%</td>
-                                    </tr>
-                                    <tr>
                                         <td>Total Awal</td>
                                         <td>: <span id="initial-total"></span></td>
                                     </tr>
@@ -209,7 +205,7 @@
                 const btn = $(this);
 
                 if (confirm(
-                    'Yakin ingin mengkonfirmasi pesanan ini? Ini akan membuat Sales Transaction.')) {
+                        'Yakin ingin mengkonfirmasi pesanan ini? Ini akan membuat Sales Transaction.')) {
                     btn.prop('disabled', true);
 
                     $.ajax({
@@ -264,8 +260,6 @@
                             $('#customer-phone').text(data.customer.phone);
                             $('#customer-address').text(data.customer.address);
                             $('#sales-agent').text(data.sales_agent);
-
-                            $('#discount-percent').text(data.discount_percent);
                             $('#initial-total').text(data.initial_total_amount);
                             $('#final-total').text(data.final_total_amount);
 
