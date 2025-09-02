@@ -73,8 +73,8 @@ $(function () {
             const useStorage =
                 img && img !== "uploads/images/products/product-1.png";
             const finalPrice =
-                product.discount > 0
-                    ? product.selling_price * product.discount
+                product.discount > 0.00
+                    ? product.selling_price - (product.selling_price * product.discount)
                     : product.selling_price;
 
             let imageHtml = "";
@@ -157,7 +157,7 @@ $(function () {
             data.totalItems +
             " item)</span>" +
             "<span>Rp " +
-            data.subtotal.toLocaleString("id-ID") +
+            data.initialPrice.toLocaleString("id-ID") +
             "</span>" +
             "</div>";
 
@@ -182,7 +182,7 @@ $(function () {
             '<div class="d-grid mt-3">' +
             '<a href="' +
             checkoutUrl +
-            '" class="btn btn-primary">Lanjut ke Pembayaran</a>' +
+            '" class="btn btn-primary">Lanjutkan</a>' +
             "</div>";
 
         $("#cart-summary").html(summaryHtml);

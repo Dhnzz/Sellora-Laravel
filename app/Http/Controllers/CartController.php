@@ -28,6 +28,7 @@ class CartController
         $subtotal = 0;
         $totalDiscount = 0;
         $totalItems = 0;
+        $initialPrice = 0;
 
         if (!empty($cart)) {
             $productIds = array_keys($cart);
@@ -36,11 +37,12 @@ class CartController
             foreach ($products as $product) {
                 $quantity = $cart[$product->id] ?? 0;
                 $originalPrice = $product->selling_price * $quantity;
-                $finalPrice = $product->discount > 0 ? $product->selling_price * $product->discount * $quantity : $originalPrice;
+                $finalPrice = $product->discount > 0.00 ? ($product->selling_price - ($product->selling_price * $product->discount)) * $quantity : $originalPrice;
 
                 $subtotal += $finalPrice;
                 $totalDiscount += $originalPrice - $finalPrice;
                 $totalItems += $quantity;
+                $initialPrice += $originalPrice;
             }
         }
 
@@ -48,6 +50,7 @@ class CartController
             'success' => true,
             'products' => $products,
             'cart' => $cart,
+            'initialPrice' => $initialPrice,
             'subtotal' => $subtotal,
             'totalDiscount' => $totalDiscount,
             'totalItems' => $totalItems,

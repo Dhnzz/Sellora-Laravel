@@ -38,7 +38,7 @@ class OrderController
             $currentPage = (int) $request->get('page', 1);
 
             // Query Sales Transactions langsung
-            $stQuery = SalesTransaction::where('customer_id', $customer->id)->with(['customer.user', 'sales_transaction_items.product.product_brand']);
+            $stQuery = SalesTransaction::where('customer_id', $customer->id)->with(['customer.user', 'sales_transaction_items.product.product_brand'])->orderBy('created_at', 'desc');
 
             if ($status) {
                 $stQuery->where('transaction_status', $status);

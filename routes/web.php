@@ -303,7 +303,6 @@ Route::middleware(['auth'])->group(function () {
                     Route::get('/data', [AdminOrderController::class, 'getAll'])->name('data'); // Rute baru untuk AJAX
                     Route::get('/{order}', [AdminOrderController::class, 'show'])->name('show');
                     Route::post('/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('confirm');
-                    Route::post('/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('cancel');
                 });
 
             // Master Data
