@@ -3,9 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderItem;
 use App\Models\SalesTransaction;
+use App\Models\SalesTransactionItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -53,7 +52,7 @@ class CheckoutController
         $total_amount = 0;
         foreach ($cart as $productIds => $quantity) {
             $product = $products->get($productIds);
-            if ($product->discount > 0.00) {
+            if ($product->discount > 0.0) {
                 $price = $product->selling_price * $product->discount;
             } else {
                 $price = $product->selling_price;
@@ -63,22 +62,39 @@ class CheckoutController
         }
 
         DB::transaction(function () use ($customer, $cart, $products, $total_amount) {
-            // Buat Purchase Order
-            $po = PurchaseOrder::create([
+            // Generate invoice ID
+            $invoiceDate = now();
+            $invoiceDateForId = $invoiceDate->format('dmY');
+            $todayCount = SalesTransaction::whereDate('invoice_date', $invoiceDate->format('Y-m-d'))->count() + 1;
+            $invoiceId = 'INV-' . $invoiceDateForId . '-' . str_pad($todayCount, 4, '0', STR_PAD_LEFT);
+
+            // Buat Sales Transaction langsung
+            $salesTransaction = SalesTransaction::create([
                 'customer_id' => $customer->id,
-                'total_amount' => $total_amount,
-                'order_date' => now(),
-                'status' => 'pending',
+                'admin_id' => 1, // Default admin ID, bisa disesuaikan
+                'sales_agent_id' => 1, // Default sales agent ID, bisa disesuaikan
+                'order_date' => $invoiceDate->format('Y-m-d'),
+                'invoice_id' => $invoiceId,
+                'invoice_date' => $invoiceDate->format('Y-m-d'),
+                'discount_percent' => 0, // Tidak ada diskon tambahan
+                'initial_total_amount' => $total_amount,
+                'final_total_amount' => $total_amount,
+                'note' => 'Pesanan dari customer',
+                'transaction_status' => 'process',
             ]);
 
-            // Buat Purchase Order Items
+            // Buat Sales Transaction Items
             foreach ($cart as $productId => $quantity) {
                 $product = $products->get($productId);
                 if ($product) {
-                    PurchaseOrderItem::create([
-                        'purchase_order_id' => $po->id,
+                    $price = $product->discount > 0.0 ? $product->selling_price * $product->discount : $product->selling_price;
+
+                    SalesTransactionItem::create([
+                        'sales_transaction_id' => $salesTransaction->id,
                         'product_id' => $productId,
-                        'quantity' => $quantity,
+                        'quantity_ordered' => $quantity,
+                        'quantity_sold' => $quantity,
+                        'msu_price' => $product->selling_price,
                     ]);
                 }
             }

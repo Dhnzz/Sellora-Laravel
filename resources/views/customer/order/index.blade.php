@@ -21,8 +21,8 @@
                             <select id="statusFilter" class="form-select form-select-sm">
                                 <option value="">Semua Status</option>
                                 <option value="pending">Menunggu Konfirmasi</option>
-                                <option value="confirmed">Dikonfirmasi</option>
                                 <option value="cancelled">Ditolak</option>
+                                <option value="process">Diproses</option>
                                 <option value="success">Berhasil</option>
                             </select>
                         </div>
@@ -99,8 +99,8 @@
                 <div class="modal-body" id="orderDetailContent">
                     {{-- Order detail content will be loaded here --}}
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tutup</button>
+                <div class="modal-footer" id="detail-footer-button">
+
                 </div>
             </div>
         </div>
@@ -161,18 +161,17 @@
                     data: filters,
                     success: function(response) {
                         if (response.success) {
+                            // console.log(response);
                             renderOrders(response.data.orders);
                             renderPagination(response.data.pagination);
                             showEmptyState(response.data.orders.length === 0);
-                            console.log(response.data.orders);
-
                         } else {
                             showError('Gagal memuat data pesanan');
                         }
                     },
                     error: function(response) {
                         showError('Terjadi kesalahan saat memuat data');
-                        
+                        // console.log(response);
                     },
                     complete: function() {
                         isLoading = false;
@@ -196,17 +195,13 @@
                 <div class="card c-card mb-3 order-item" data-order-id="${order.id}" data-order-type="${order.type}">
                     <div class="card-body">
                         <div class="row align-items-center">
-                            <div class="col-md-2">
-                                <div class="small text-muted mb-1">Tipe</div>
-                                <div>${getTypeBadge(order.type)}</div>
-                            </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <div class="small text-muted mb-1">No. Order</div>
-                                <div class="fw-semibold">${order.order_number || '-'}</div>
+                                <div class="fw-semibold">#${order.invoice_number || '-'}</div>
                             </div>
                             <div class="col-md-2">
                                 <div class="small text-muted mb-1">Tanggal Order</div>
-                                <div>${formatDate(order.order_date)}</div>
+                                <div>${formatDate(order.invoice_date)}</div>
                             </div>
                             <div class="col-md-3">
                                 <div class="small text-muted mb-1">Total</div>
@@ -216,8 +211,8 @@
                                 <div class="small text-muted mb-1">Status</div>
                                 <div>${getStatusBadge(order.status)}</div>
                             </div>
-                            <div class="col-md-1 text-end">
-                                <button class="btn btn-outline-primary btn-sm view-detail" data-order-id="${order.id}" data-order-type="${order.type}">
+                            <div class="col-md-1 text-end ms-auto">
+                                <button class="btn btn-outline-primary btn-sm view-detail" data-order-id="${order.id}">
                                     <i class="ti ti-eye me-1"></i> Detail
                                 </button>
                             </div>
@@ -290,21 +285,38 @@
             // View order detail
             $(document).on('click', '.view-detail', function() {
                 const orderId = $(this).data('order-id');
-                const orderType = $(this).data('order-type');
-                loadOrderDetail(orderId, orderType);
+                loadOrderDetail(orderId);
             });
 
             // Load order detail
-            function loadOrderDetail(orderId, orderType) {
-                const url = '{{ url('customer/order') }}/' + orderId + (orderType ? '?type=' + orderType : '');
+            function loadOrderDetail(orderId) {
+                const url = '{{ url('customer/order') }}/' + orderId;
                 $.ajax({
                     url: url,
                     method: 'GET',
                     success: function(response) {
                         if (response.success) {
+                            // console.log(response);
                             $('#orderDetailContent').html(response.html);
                             $('#orderDetailModal').modal('show');
+                            if (response.orderStatus != 'success' && response.orderStatus !=
+                                'cancelled') {
+                                $('#detail-footer-button').html(
+                                    `
+                                        <button type="button" class="btn btn-danger cancel-order" data-order-id="${response.orderId}">Batalkan Order</button>
+                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tutup</button>
+                                    `
+                                );
+                            } else {
+                                $('#detail-footer-button').html(
+                                    `
+                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tutup</button>
+                                    `
+                                );
+                            }
+                            $('#detail-footer-button').removeClass('d-none')
                         } else {
+                            // console.log(response);
                             showError('Gagal memuat detail pesanan');
                         }
                     },
@@ -313,6 +325,64 @@
                     }
                 });
             }
+
+            $(document).on('click', '.cancel-order', function() {
+                const orderId = $(this).data('order-id');
+                const url = '{{ url('customer/order/cancelOrder') }}/' + orderId;
+
+                $('#orderDetailContent').html(
+                    `
+                        <form id="cancelOrderForm">
+                            @csrf
+                            <label for="">Alasan membatalkan pesanan <small class="text-danger">*</small></label>
+                            <textarea name="cancelNote" id="cancelNote" class="form-control" placeholder="Berikan alasan anda ingin membatalkan pesanan ini"></textarea>
+                            <div class="d-flex gap-2 mt-3 justify-content-end">
+                                <button type="submit" class="btn btn-primary">Batalkan Order</button>
+                                <button type="button" class="btn btn-danger view-detail" data-order-id="${orderId}">Kembali</button>
+                            </div>
+                        </form>
+                    `
+                );
+                $('#detail-footer-button').addClass('d-none');
+
+                // Handle submit form cancel order dengan AJAX
+                $('#cancelOrderForm').on('submit', function(e) {
+                    e.preventDefault();
+                    const cancelNote = $('#cancelNote').val();
+                    if (!cancelNote) {
+                        toastr.error('Alasan membatalkan pesanan wajib diisi');
+                        return;
+                    }
+                    // Gunakan FormData agar data form bisa dibaca sebagai $request di controller
+                    var formData = new FormData(this);
+
+                    // formData.append('_token', '{{ csrf_token() }}');
+                    // formData.append('cancel_note', cancelNote);
+
+                    $.ajax({
+                        url: url,
+                        method: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            if (response.success) {
+                                // console.log(response);
+                                toastr.success(response.message);
+                                $('#orderDetailModal').modal('hide');
+                                loadOrders();
+                            } else {
+                                toastr.error(response.message ||
+                                    'Gagal membatalkan pesanan');
+                            }
+                        },
+                        error: function(response) {
+                            // console.log(response);
+                            toastr.error('Terjadi kesalahan saat membatalkan pesanan');
+                        }
+                    });
+                });
+            })
 
             // Utility functions
             function formatDate(dateString) {
@@ -331,19 +401,11 @@
             function getStatusBadge(status) {
                 const statusMap = {
                     'pending': '<span class="badge bg-warning">Menunggu Konfirmasi</span>',
-                    'confirmed': '<span class="badge bg-info">Dikonfirmasi</span>',
-                    'cancelled': '<span class="badge bg-danger">Ditolak</span>',
+                    'process': '<span class="badge bg-info">Diproses</span>',
+                    'cancelled': '<span class="badge bg-danger">Dibatalkan</span>',
                     'success': '<span class="badge bg-success">Berhasil</span>',
                 };
                 return statusMap[status] || '<span class="badge bg-secondary">Unknown</span>';
-            }
-
-            function getTypeBadge(type) {
-                const typeMap = {
-                    'po': '<span class="badge bg-primary">Pesanan</span>',
-                    'st': '<span class="badge bg-success">Transaksi</span>',
-                };
-                return typeMap[type] || '<span class="badge bg-secondary">Unknown</span>';
             }
 
             function showLoading(show) {
@@ -371,11 +433,5 @@
                 toastr.error(message);
             }
         });
-
-        // Review order function (global)
-        function reviewOrder(orderId) {
-            // Implement review functionality
-            alert('Fitur review akan segera hadir!');
-        }
     </script>
 @endpush

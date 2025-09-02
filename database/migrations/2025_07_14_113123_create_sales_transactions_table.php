@@ -12,16 +12,17 @@ return new class extends Migration {
     {
         Schema::create('sales_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('purchase_order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('admin_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('sales_agent_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('admin_id')->constrained()->cascadeOnDelete()->nullable();
+            $table->foreignId('sales_agent_id')->constrained()->cascadeOnDelete()->nullable();
             $table->string('invoice_id')->unique();
             $table->date('invoice_date');
             $table->decimal('discount_percent', 5, 2)->nullable()->check('discount_percent >= 0 AND discount_percent <= 100');
             $table->decimal('initial_total_amount', 15, 4)->check('initial_total_amount >= 0');
             $table->decimal('final_total_amount', 15, 4)->check('final_total_amount >= 0');
-            $table->text('note');
-            $table->enum('transaction_status', ['process', 'success'])->default('process');
+            $table->text('note')->nullable();
+            $table->enum('transaction_status', ['pending','process','cancelled','success'])->default('pending');
+            $table->text('cancel_note')->nullable();
             $table->timestamp('delivery_confirmed_at')->nullable();
             $table->timestamps();
             $table->softDeletes();

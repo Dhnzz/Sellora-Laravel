@@ -12,16 +12,12 @@ use App\Models\Supplier;
 use App\Models\SalesAgent;
 use App\Models\ProductUnit;
 use App\Models\ProductBundle;
-use App\Models\PurchaseOrder;
-use App\Models\DeliveryReturn;
 use App\Models\StockAdjustment;
 use Illuminate\Database\Seeder;
 use App\Models\SalesTransaction;
 use App\Models\SupplierPurchase;
 use App\Models\WarehouseManager;
-use App\Models\PurchaseOrderItem;
 use Database\Seeders\AdminSeeder;
-use App\Models\DeliveryReturnItem;
 use Database\Seeders\MasterSeeder;
 use Illuminate\Support\Facades\DB;
 use App\Models\SalesTransactionItem;
@@ -53,13 +49,13 @@ class PurchaseAndSalesSeeder extends Seeder
 
         DB::beginTransaction();
         try {
-            // ============================ Purchase Orders (Customers) ============================
-            // Buat 20 Purchase Order, sebar ke hari ini, bulan ini, tahun ini, dan tahun kemarin
-            $confirmedPurchaseOrders = [];
-            $totalPurchaseOrderAmount = 0;
-            $purchaseOrderDates = [];
+            // ============================ Sales Transactions (langsung tanpa PurchaseOrder) ============================
+            // Buat 20 Sales Transaction, sebar ke hari ini, bulan ini, tahun ini, dan tahun kemarin
+            $salesTransactions = [];
+            $totalSalesTransactionAmount = 0;
+            $salesTransactionDates = [];
 
-            // Bagi 20 PO: 5 hari ini, 5 bulan ini (selain hari ini), 5 tahun ini (selain bulan ini), 5 tahun kemarin
+            // Bagi 20 ST: 5 hari ini, 5 bulan ini (selain hari ini), 5 tahun ini (selain bulan ini), 5 tahun kemarin
             $today = Carbon::today();
             $startOfMonth = Carbon::now()->startOfMonth();
             $startOfYear = Carbon::now()->startOfYear();
@@ -68,82 +64,39 @@ class PurchaseAndSalesSeeder extends Seeder
 
             // 5 hari ini
             for ($i = 0; $i < 5; $i++) {
-                $purchaseOrderDates[] = $today->copy();
+                $salesTransactionDates[] = $today->copy();
             }
             // 5 bulan ini (selain hari ini)
             for ($i = 0; $i < 5; $i++) {
-                $purchaseOrderDates[] = $faker->dateTimeBetween($startOfMonth, $today->copy()->subDay());
+                $salesTransactionDates[] = $faker->dateTimeBetween($startOfMonth, $today->copy()->subDay());
             }
             // 5 tahun ini (selain bulan ini)
             for ($i = 0; $i < 5; $i++) {
-                $purchaseOrderDates[] = $faker->dateTimeBetween($startOfYear, $startOfMonth->copy()->subDay());
+                $salesTransactionDates[] = $faker->dateTimeBetween($startOfYear, $startOfMonth->copy()->subDay());
             }
             // 5 tahun kemarin
             for ($i = 0; $i < 5; $i++) {
-                $purchaseOrderDates[] = $faker->dateTimeBetween($startOfLastYear, $endOfLastYear);
+                $salesTransactionDates[] = $faker->dateTimeBetween($startOfLastYear, $endOfLastYear);
             }
 
             // Acak urutan tanggal agar tidak berurutan
-            shuffle($purchaseOrderDates);
-
-            foreach ($purchaseOrderDates as $orderDate) {
-                $orderDate = $orderDate instanceof \DateTime ? Carbon::instance($orderDate) : $orderDate;
-
-                // Hitung dulu item dan totalnya, jangan langsung insert
-                $itemCount = rand(2, 3);
-                $orderedProducts = collect();
-                $poTotal = 0;
-                $poItemsData = [];
-                for ($j = 0; $j < $itemCount; $j++) {
-                    $product = $products->whereNotIn('id', $orderedProducts->pluck('id'))->random();
-                    $orderedProducts->push($product);
-
-                    $qty = rand(1, 5);
-                    $poItemsData[] = [
-                        'product_id' => $product->id,
-                        'quantity' => $qty,
-                    ];
-                    $poTotal += $qty * $product->selling_price;
-                }
-
-                // Setelah total didapat, baru buat PO dengan total_amount yang benar
-                $po = PurchaseOrder::create([
-                    'customer_id' => $customers->random()->id,
-                    'total_amount' => $poTotal,
-                    'order_date' => $orderDate,
-                    'status' => 'confirmed',
-                ]);
-                $confirmedPurchaseOrders[] = $po;
-
-                // Simpan item ke database
-                foreach ($poItemsData as $itemData) {
-                    PurchaseOrderItem::create([
-                        'purchase_order_id' => $po->id,
-                        'product_id' => $itemData['product_id'],
-                        'quantity' => $itemData['quantity'],
-                    ]);
-                }
-
-                $totalPurchaseOrderAmount += $poTotal;
-            }
+            shuffle($salesTransactionDates);
 
             // ============================ Sales Transactions ============================
             $successfulSalesCount = 0;
             $totalSalesTransactionAmount = 0;
-            foreach ($confirmedPurchaseOrders as $po) {
-                if (SalesTransaction::where('purchase_order_id', $po->id)->exists()) {
-                    continue;
-                }
+            foreach ($salesTransactionDates as $orderDate) {
+                $orderDate = $orderDate instanceof \DateTime ? Carbon::instance($orderDate) : $orderDate;
 
                 // invoice_date harus >= order_date
-                $invoiceDate = $faker->dateTimeBetween($po->order_date, 'now');
+                $invoiceDate = $faker->dateTimeBetween($orderDate, 'now');
 
                 // Status & delivery (random)
                 $deliveryConfirmedAt = null;
                 $paymentStatus = 'success';
                 if ($faker->boolean(80)) {
                     $deliveryConfirmedAt = (clone $invoiceDate)->modify('+' . rand(0, 7) . ' days');
-                    $paymentStatus = $faker->randomElement(['process', 'success']);
+                    $paymentStatus = $faker->randomElement(['pending','process','cancelled','success']);
                 }
 
                 // ambil admin & sales
@@ -166,15 +119,15 @@ class PurchaseAndSalesSeeder extends Seeder
                 // rakit item + hitung subtotal SEBELUM diskon transaksi
                 $subtotalBeforeOrderDiscount = 0;
                 $salesTransactionItemsData = [];
-                $poItems = $po->purchase_order_items()->get();
 
-                foreach ($poItems as $poProduct) {
-                    $product = $products->find($poProduct->product_id);
-                    if (!$product) {
-                        continue;
-                    }
+                // Buat item secara acak (2-3 produk)
+                $itemCount = rand(2, 3);
+                $orderedProducts = collect();
+                for ($j = 0; $j < $itemCount; $j++) {
+                    $product = $products->whereNotIn('id', $orderedProducts->pluck('id'))->random();
+                    $orderedProducts->push($product);
 
-                    $qtyOrdered = (int) $poProduct->quantity;
+                    $qtyOrdered = rand(1, 5);
                     $qtySold = $qtyOrdered;
 
                     // simulasi retur di tempat (kalau bukan success)
@@ -186,7 +139,7 @@ class PurchaseAndSalesSeeder extends Seeder
                     }
 
                     $unitPrice = (float) $product->selling_price; // harga asli saat ini
-                    $pdisc = (float) ($product->discount_percent ?? 0); // diskon produk (%)
+                    $pdisc = (float) ($product->discount ?? 0); // diskon produk (%)
                     $pdisc = max(0, min(100, $pdisc));
                     $unitAfter = round($unitPrice * (1 - $pdisc / 100), 2); // harga satuan setelah diskon produk
                     $lineBeforeOrder = round($unitAfter * $qtySold, 2); // subtotal line sebelum diskon order
@@ -219,8 +172,8 @@ class PurchaseAndSalesSeeder extends Seeder
                 }
 
                 // Diskon transaksi ORDER-LEVEL (misal 0–15%)
-                $orderDiscountPercent = $faker->numberBetween(0, 15);
-                $totalAmountAfterDiscount = round($subtotalBeforeOrderDiscount * (1 - $orderDiscountPercent / 100), 2);
+                $orderDiscountPercent = number_format($faker->randomFloat(2, 0.00, 0.50));
+                $totalAmountAfterDiscount = number_format($subtotalBeforeOrderDiscount * (1 - $orderDiscountPercent / 100), 2, '.', '');
 
                 // final_amount_paid (boleh kurang kalau retur/process)
                 $finalAmountPaid = $totalAmountAfterDiscount;
@@ -235,7 +188,7 @@ class PurchaseAndSalesSeeder extends Seeder
                     $invoiceId = 'INV-' . $invoiceDateForId . '-' . str_pad($todayCount, 4, '0', STR_PAD_LEFT);
 
                     $salesTransaction = SalesTransaction::create([
-                        'purchase_order_id' => $po->id,
+                        'customer_id' => $customers->random()->id,
                         'admin_id' => $adminUser->id,
                         'sales_agent_id' => $salesAgentUser->id,
                         'invoice_id' => $invoiceId,
@@ -268,7 +221,7 @@ class PurchaseAndSalesSeeder extends Seeder
                         }
                     }
                 } catch (\Exception $e) {
-                    $this->command->error('Error creating Sales Transaction for PO ' . $po->id . ': ' . $e->getMessage());
+                    $this->command->error('Error creating Sales Transaction: ' . $e->getMessage());
                 }
             }
             $this->command->info('Created ' . $successfulSalesCount . ' Sales Transactions.');
@@ -324,84 +277,14 @@ class PurchaseAndSalesSeeder extends Seeder
                 $totalSupplierPurchaseAmount += $totalAmount;
             }
 
-            // Pastikan total supplier purchase tidak lebih mahal dari total purchase order/sales
-            if ($totalSupplierPurchaseAmount > min($totalPurchaseOrderAmount, $totalSalesTransactionAmount)) {
-                $this->command->warn('Total Supplier Purchase lebih besar dari total PO/Sales, mohon cek harga dan quantity di seeder.');
+            // Pastikan total supplier purchase tidak lebih mahal dari total sales
+            if ($totalSupplierPurchaseAmount > $totalSalesTransactionAmount) {
+                $this->command->warn('Total Supplier Purchase lebih besar dari total Sales, mohon cek harga dan quantity di seeder.');
             }
             $this->command->info('Created ' . $successfulSupplierPurchases . ' Supplier Purchases.');
 
-            // ============================ Delivery Returns ============================
-            $successfulDeliveryReturns = 0;
-            if (!empty($salesTransactionsWithPotentialReturns)) {
-                $numDeliveryReturns = rand(1, min(5, count($salesTransactionsWithPotentialReturns))); // max 5 returns for now
-
-                for ($i = 0; $i < $numDeliveryReturns; $i++) {
-                    $salesTransaction = $faker->randomElement($salesTransactionsWithPotentialReturns);
-
-                    // Only create a return if it hasn't been returned yet (avoid unique constraint for demo)
-                    if (DeliveryReturn::where('sales_transaction_id', $salesTransaction->id)->exists()) {
-                        continue;
-                    }
-
-                    $returnDate = (clone $salesTransaction->delivery_confirmed_at ?? $salesTransaction->invoice_date)->addDays(rand(0, 5)); // Return happens shortly after delivery/invoice
-                    if ($returnDate->isAfter(Carbon::now())) {
-                        continue; // Don't create future returns
-                    }
-
-                    $deliveryReturn = DeliveryReturn::create([
-                        'sales_transaction_id' => $salesTransaction->id,
-                        'sales_agent_user_id' => $salesTransaction->sales_agent_user_id, // Sales agent yang mengantar
-                        'return_date' => $returnDate->format('Y-m-d'),
-                        'reason' => $faker->randomElement(['Barang tidak diambil', 'Ukuran salah dari pesanan', 'Barang rusak saat pengantaran']),
-                        'status' => $faker->randomElement(['pending_admin_confirmation', 'confirmed_by_admin']), // Langsung ke status awal atau dikonfirmasi
-                        'confirmed_by_admin_user_id' => $faker->boolean(70) ? $admins->random()->id : null, // 70% chance to be confirmed by an admin
-                        'confirmed_at' => $faker->boolean(70) ? (clone $returnDate)->addDays(rand(0, 2)) : null,
-                    ]);
-                    $successfulDeliveryReturns++;
-
-                    // DeliveryReturnItem - Only return items that were *not* sold in SalesTransactionItem
-                    $notSoldItems = $salesTransaction->items->filter(function ($item) {
-                        return $item->quantity_sold < $item->quantity_ordered;
-                    });
-
-                    if ($notSoldItems->isNotEmpty()) {
-                        $itemToReturn = $notSoldItems->random(); // Randomly pick one item that wasn't fully sold
-
-                        $quantityReturned = $itemToReturn->quantity_ordered - $itemToReturn->quantity_sold;
-                        $quantityReturned = rand(1, max(1, $quantityReturned)); // Ensure at least 1 returned, max what wasn't sold
-
-                        $deliveryReturn->items()->create([
-                            'product_id' => $itemToReturn->product_id,
-                            'quantity_returned' => $quantityReturned, // Quantity in MSU
-                        ]);
-
-                        // Simulate Stock Adjustment for returned items by Warehouse Manager
-                        if ($deliveryReturn->status === 'confirmed_by_admin') {
-                            $warehouseManager = $admins->random()->warehouseManager ?? $faker->randomElement($warehouseManagers); // Assume admin can also be WM or pick random WM
-                            if ($warehouseManager) {
-                                StockAdjustment::create([
-                                    'warehouse_manager_id' => $warehouseManager->id,
-                                    'product_id' => $itemToReturn->product_id,
-                                    'reason' => 'Pengembalian dari Pengantaran Transaksi #' . $salesTransaction->id,
-                                    'quantity' => $quantityReturned,
-                                    'adjustment_type' => 'increase',
-                                    'source_type' => 'delivery_return',
-                                    'source_id' => $deliveryReturn->id,
-                                    'adjustment_date' => Carbon::parse($deliveryReturn->confirmed_at ?? $deliveryReturn->return_date)->format('Y-m-d'),
-                                ]);
-                                // Update actual stock
-                                $stock = Stock::where('product_id', $itemToReturn->product_id)->first();
-                                if ($stock) {
-                                    $stock->increment('quantity', $quantityReturned);
-                                } else {
-                                    Stock::create(['product_id' => $itemToReturn->product_id, 'quantity' => $quantityReturned]);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            $this->command->info('Created ' . $successfulDeliveryReturns . ' Delivery Returns.');
+            // ============================ Delivery Returns (dinonaktifkan) ============================
+            // Bagian pengembalian pengantaran di-nonaktifkan sesuai instruksi.
 
             // ============================ Stock Adjustments (Manual/Other Reasons) ============================
             $numManualAdjustments = rand(5, 10);

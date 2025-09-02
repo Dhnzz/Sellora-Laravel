@@ -21,11 +21,45 @@ class CartController
         return view('customer.cart.index', compact('products', 'cart'));
     }
 
+    public function getCartData()
+    {
+        $cart = session('cart', []);
+        $products = collect();
+        $subtotal = 0;
+        $totalDiscount = 0;
+        $totalItems = 0;
+
+        if (!empty($cart)) {
+            $productIds = array_keys($cart);
+            $products = Product::query()->join('product_brands', 'products.product_brand_id', '=', 'product_brands.id')->select('products.id', 'products.name as product_name', 'product_brands.name as brand_name', 'selling_price', 'discount', 'image')->whereIn('products.id', $productIds)->get();
+
+            foreach ($products as $product) {
+                $quantity = $cart[$product->id] ?? 0;
+                $originalPrice = $product->selling_price * $quantity;
+                $finalPrice = $product->discount > 0 ? $product->selling_price * $product->discount * $quantity : $originalPrice;
+
+                $subtotal += $finalPrice;
+                $totalDiscount += $originalPrice - $finalPrice;
+                $totalItems += $quantity;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'products' => $products,
+            'cart' => $cart,
+            'subtotal' => $subtotal,
+            'totalDiscount' => $totalDiscount,
+            'totalItems' => $totalItems,
+            'cart_count' => array_sum($cart),
+        ]);
+    }
+
     public function add(Request $request)
     {
         $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1|max:100',
+            'quantity' => 'required|integer|min:1',
         ]);
 
         $cart = session('cart', []);
@@ -50,7 +84,7 @@ class CartController
     {
         $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:0|max:100',
+            'quantity' => 'required|integer|min:0',
         ]);
 
         $cart = session('cart', []);

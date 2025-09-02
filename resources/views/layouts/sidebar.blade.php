@@ -148,6 +148,17 @@
                         </li>
                         <li class="nav-small-cap">
                             <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
+                            <span class="hide-menu">Pesanan</span>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="{{ route('admin.orders.index') }}"
+                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.order.*') ? 'active' : '' }}">
+                                <i class="ti ti-clipboard-list fs-5 me-2"></i>
+                                <span class="hide-menu">Daftar Pesanan</span>
+                            </a>
+                        </li>
+                        <li class="nav-small-cap">
+                            <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
                             <span class="hide-menu">Master Data</span>
                         </li>
                         <li class="sidebar-item">
@@ -176,49 +187,6 @@
                                 class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.master_data.product.*') ? 'active' : '' }}">
                                 <i class="ti ti-package fs-5 me-2"></i>
                                 <span class="hide-menu">Produk</span>
-                            </a>
-                        </li>
-                        <li class="nav-small-cap">
-                            <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-                            <span class="hide-menu">Transaksi</span>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{{ route('admin.orders.index') }}"
-                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.orders.*') ? 'active' : '' }}">
-                                <i class="ti ti-clipboard-list fs-5 me-2"></i>
-                                <span class="hide-menu">Pesanan</span>
-                            </a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{{ route('admin.master_data.supplier.index') }}"
-                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.master_data.supplier.*') ? 'active' : '' }}">
-                                <i class="ti ti-shopping-cart fs-5 me-2"></i>
-                                <span class="hide-menu">Pembelian Supply</span>
-                            </a>
-                        </li>
-                        <li class="nav-small-cap">
-                            <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-                            <span class="hide-menu">Pengiriman</span>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{{ route('admin.master_data.supplier.index') }}"
-                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.master_data.supplier.*') ? 'active' : '' }}">
-                                <i class="ti ti-truck fs-5 me-2"></i>
-                                <span class="hide-menu">Konfirmasi Pengantaran</span>
-                            </a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{{ route('admin.master_data.supplier.index') }}"
-                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.master_data.supplier.*') ? 'active' : '' }}">
-                                <i class="ti ti-rotate fs-5 me-2"></i>
-                                <span class="hide-menu">Return Pengantaran</span>
-                            </a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{{ route('admin.master_data.supplier.index') }}"
-                                class="sidebar-link d-flex align-items-center {{ Request::routeIs('admin.master_data.supplier.*') ? 'active' : '' }}">
-                                <i class="ti ti-cash-banknote fs-5 me-2"></i>
-                                <span class="hide-menu">Tutup Buku</span>
                             </a>
                         </li>
                     @break

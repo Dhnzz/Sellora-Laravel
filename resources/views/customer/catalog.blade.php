@@ -91,7 +91,7 @@
                                         <span class="text-decoration-line-through text-muted">Rp
                                             {{ number_format($p->selling_price, 0, ',', '.') }}</span>
                                         <span class="ms-1 text-success fw-semibold">Rp
-                                            {{ number_format($p->selling_price * $p->discount, 0, ',', '.') }}</span>
+                                            {{ number_format($p->selling_price - ($p->selling_price * $p->discount), 0, ',', '.') }}</span>
                                     </div>
                                     <div class="mb-1">
                                         <span class="badge bg-danger">Diskon {{ $p->discount * 100 }}%</span>

@@ -75,7 +75,7 @@
                                     <span class="text-decoration-line-through text-muted">Rp
                                         {{ number_format($item->selling_price, 0, ',', '.') }}</span>
                                     <span class="ms-1 text-success fw-semibold">Rp
-                                        {{ number_format($item->selling_price * $item->discount, 0, ',', '.') }}</span>
+                                        {{ number_format($item->selling_price - ($item->selling_price * $item->discount), 0, ',', '.') }}</span>
                                 </div>
                             @else
                                 <div class="small">

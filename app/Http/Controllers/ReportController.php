@@ -36,7 +36,7 @@ class ReportController
         [$from, $to] = $this->dateRange($r);
 
         // Base query: sales_transactions
-        $base = DB::table('sales_transactions as st')->when($from, fn($q) => $q->whereDate('st.invoice_date', '>=', $from))->when($to, fn($q) => $q->whereDate('st.invoice_date', '<=', $to))->when($r->filled('sales_id'), fn($q) => $q->where('st.sales_agent_id', $r->input('sales_id')))->when($r->filled('status'), fn($q) => $q->where('st.transaction_status', $r->input('status')));
+        $base = DB::table('sales_transactions as st')->when($from, fn($q) => $q->whereDate('st.invoice_date', '>=', $from))->when($to, fn($q) => $q->whereDate('st.invoice_date', '<=', $to))->when($r->filled('sales_id'), fn($q) => $q->where('st.sales_agent_id', $r->input('sales_id')))->when($r->filled('status'), fn($q) => $q->where('st.transaction_status', $r->input('status')))->when($r->filled('customer_id'), fn($q) => $q->where('st.customer_id', $r->input('customer_id')));
 
         // ====== Cards ======
         // Gross = sum(initial_total_amount)
@@ -55,19 +55,9 @@ class ReportController
             )
             ->first();
 
-        // Hitung retur (opsional) lewat delivery_returns (asumsi punya total_amount & relasi via sales_transaction_id)
-        $returnTotal = DB::table('delivery_returns as dr')
-            ->join('sales_transactions as st2', 'st2.id', '=', 'dr.sales_transaction_id')
-            ->when($from, fn($q) => $q->whereDate('st2.invoice_date', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('st2.invoice_date', '<=', $to))
-            ->when($r->filled('sales_id'), fn($q) => $q->where('st2.sales_agent_id', $r->input('sales_id')))
-            ->when($r->filled('status'), fn($q) => $q->where('st2.transaction_status', $r->input('status')))
-            ->when($r->filled('customer_id'), function ($q) use ($r) {
-                $q->join('purchase_orders as po2', 'po2.id', '=', 'st2.purchase_order_id')->where('po2.customer_id', $r->input('customer_id'));
-            })
-            ->sum('dr.total_amount');
-
-        $netSales = (float) $cardsRow->net_before_return - (float) $returnTotal;
+        // Retur di-nonaktifkan, set 0
+        $returnTotal = 0;
+        $netSales = (float) $cardsRow->net_before_return;
 
         // ====== Trend per tanggal (pakai final_total_amount) ======
         $trend = (clone $base)->selectRaw('DATE(st.invoice_date) as d, SUM(st.final_total_amount) as total')->groupBy(DB::raw('DATE(st.invoice_date)'))->orderBy('d')->get();
@@ -80,13 +70,12 @@ class ReportController
         $topProducts = DB::table('sales_transaction_items as sti')
             ->join('sales_transactions as st', 'st.id', '=', 'sti.sales_transaction_id')
             ->join('products as p', 'p.id', '=', 'sti.product_id')
+            ->leftJoin('customers as c', 'c.id', '=', 'st.customer_id')
             ->when($from, fn($q) => $q->whereDate('st.invoice_date', '>=', $from))
             ->when($to, fn($q) => $q->whereDate('st.invoice_date', '<=', $to))
             ->when($r->filled('sales_id'), fn($q) => $q->where('st.sales_agent_id', $r->input('sales_id')))
             ->when($r->filled('status'), fn($q) => $q->where('st.transaction_status', $r->input('status')))
-            ->when($r->filled('customer_id'), function ($q) use ($r) {
-                $q->join('purchase_orders as po3', 'po3.id', '=', 'st.purchase_order_id')->where('po3.customer_id', $r->input('customer_id'));
-            })
+            ->when($r->filled('customer_id'), fn($q) => $q->where('st.customer_id', $r->input('customer_id')))
             ->selectRaw(
                 '
                     p.id,
@@ -102,23 +91,11 @@ class ReportController
 
         // ====== Top Customers ======
         $topCustomerLimit = max(1, (int) $r->get('top_customer_limit', 10));
-        $topCustomers = DB::table('sales_transactions as st')
-            ->join('purchase_orders as po', 'po.id', '=', 'st.purchase_order_id') // asumsi
-            ->leftJoin('customers as c', 'c.id', '=', 'po.customer_id') // asumsi
-            ->when($from, fn($q) => $q->whereDate('st.invoice_date', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('st.invoice_date', '<=', $to))
-            ->when($r->filled('sales_id'), fn($q) => $q->where('st.sales_agent_id', $r->input('sales_id')))
-            ->when($r->filled('status'), fn($q) => $q->where('st.transaction_status', $r->input('status')))
-            ->selectRaw('po.customer_id, COALESCE(c.name,"-") as customer, COUNT(*) as trx_count, SUM(st.final_total_amount) as omzet')
-            ->groupBy('po.customer_id', 'c.name')
-            ->orderByDesc('omzet')
-            ->limit($topCustomerLimit)
-            ->get();
+        $topCustomers = DB::table('sales_transactions as st')->leftJoin('customers as c', 'c.id', '=', 'st.customer_id')->when($from, fn($q) => $q->whereDate('st.invoice_date', '>=', $from))->when($to, fn($q) => $q->whereDate('st.invoice_date', '<=', $to))->when($r->filled('sales_id'), fn($q) => $q->where('st.sales_agent_id', $r->input('sales_id')))->when($r->filled('status'), fn($q) => $q->where('st.transaction_status', $r->input('status')))->when($r->filled('customer_id'), fn($q) => $q->where('st.customer_id', $r->input('customer_id')))->selectRaw('st.customer_id, COALESCE(c.name,"-") as customer, COUNT(*) as trx_count, SUM(st.final_total_amount) as omzet')->groupBy('st.customer_id', 'c.name')->orderByDesc('omzet')->limit($topCustomerLimit)->get();
 
         // ====== Table Invoices ======
         $invoices = (clone $base)
-            ->leftJoin('purchase_orders as po', 'po.id', '=', 'st.purchase_order_id')
-            ->leftJoin('customers as c', 'c.id', '=', 'po.customer_id')
+            ->leftJoin('customers as c', 'c.id', '=', 'st.customer_id')
             ->leftJoin('sales_agents as sa', 'sa.id', '=', 'st.sales_agent_id') // asumsi
             ->selectRaw(
                 '
@@ -169,11 +146,11 @@ class ReportController
         $orderDir = $r->input('order.0.dir', 'desc') === 'asc' ? 'asc' : 'desc';
         $cols = [
             0 => 'st.invoice_date',
-            1 => 'st.id',
+            1 => 'st.invoice_id',
             2 => 'c.name',
             3 => 'sa.name',
             4 => 'st.initial_total_amount',
-            5 => 'discount_amount_alias', // alias, kita hitung manual
+            5 => 'discount_percent', // alias, kita hitung manual
             7 => 'return_amount_alias', // alias
             8 => 'st.final_total_amount',
             9 => 'st.transaction_status',
@@ -183,20 +160,7 @@ class ReportController
         // ====== Filter tanggal dll (sama seperti base query di data()) ======
         [$from, $to] = $this->dateRange($r);
 
-        $base = DB::table('sales_transactions as st')
-            ->leftJoin('purchase_orders as po', 'po.id', '=', 'st.purchase_order_id')
-            ->leftJoin('customers as c', 'c.id', '=', 'po.customer_id')
-            ->leftJoin('sales_agents as sa', 'sa.id', '=', 'st.sales_agent_id')
-            ->when($from, fn($q) => $q->whereDate('st.invoice_date', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('st.invoice_date', '<=', $to))
-            ->when($r->filled('sales_id'), fn($q) => $q->where('st.sales_agent_id', $r->input('sales_id')))
-            ->when($r->filled('status'), fn($q) => $q->where('st.transaction_status', $r->input('status')))
-            ->when($r->filled('customer_id'), function ($q) use ($r) {
-                // pakai whereExists biar aman dari duplikasi
-                $q->whereExists(function ($sub) use ($r) {
-                    $sub->from('purchase_orders as po2')->whereColumn('po2.id', 'st.purchase_order_id')->where('po2.customer_id', $r->input('customer_id'));
-                });
-            });
+        $base = DB::table('sales_transactions as st')->leftJoin('customers as c', 'c.id', '=', 'st.customer_id')->leftJoin('sales_agents as sa', 'sa.id', '=', 'st.sales_agent_id')->when($from, fn($q) => $q->whereDate('st.invoice_date', '>=', $from))->when($to, fn($q) => $q->whereDate('st.invoice_date', '<=', $to))->when($r->filled('sales_id'), fn($q) => $q->where('st.sales_agent_id', $r->input('sales_id')))->when($r->filled('status'), fn($q) => $q->where('st.transaction_status', $r->input('status')))->when($r->filled('customer_id'), fn($q) => $q->where('st.customer_id', $r->input('customer_id')));
 
         // ====== Total baris tanpa filter pencarian (recordsTotal) ======
         $recordsTotal = (clone $base)->count('st.id');
@@ -224,16 +188,16 @@ class ReportController
             COALESCE(c.name,"-")  as customer,
             COALESCE(sa.name,"-") as sales,
             st.initial_total_amount as subtotal,
-            (st.initial_total_amount - st.final_total_amount) as discount_amount_alias,
+            st.discount_percent,
             0 as tax_amount,           -- kalau ada kolom pajak, ganti di sini
             0 as return_amount_alias,  -- kalau mau, isi dari tabel retur per invoice
             st.final_total_amount as total,
             st.transaction_status as status
         ',
             )
-            ->when($orderBy === 'discount_amount_alias', fn($q) => $q->orderByRaw('(st.initial_total_amount - st.final_total_amount) ' . $orderDir))
+            ->when($orderBy === 'discount_percent', fn($q) => $q->orderByRaw('(st.initial_total_amount - st.final_total_amount) ' . $orderDir))
             ->when($orderBy === 'return_amount_alias', fn($q) => $q->orderByRaw('0 ' . $orderDir)) // placeholder, ganti kalau sudah ada nilai retur per invoice
-            ->when(!in_array($orderBy, ['discount_amount_alias', 'return_amount_alias']), fn($q) => $q->orderBy($orderBy, $orderDir))
+            ->when(!in_array($orderBy, ['discount_percent']), fn($q) => $q->orderBy($orderBy, $orderDir))
             ->skip($start)
             ->take($length)
             ->get();
@@ -248,7 +212,7 @@ class ReportController
                 'customer' => $r->customer,
                 'sales' => $r->sales,
                 'subtotal' => (float) $r->subtotal,
-                'discount' => (float) $r->discount_amount_alias,
+                'discount' => (float) $r->discount_percent,
                 'retur' => (float) $r->return_amount_alias,
                 'total' => (float) $r->total,
                 'status' => $r->status,
@@ -268,8 +232,7 @@ class ReportController
     {
         // Header transaksi
         $h = DB::table('sales_transactions as st')
-            ->leftJoin('purchase_orders as po', 'po.id', '=', 'st.purchase_order_id')
-            ->leftJoin('customers as c', 'c.id', '=', 'po.customer_id')
+            ->leftJoin('customers as c', 'c.id', '=', 'st.customer_id')
             ->leftJoin('sales_agents as sa', 'sa.id', '=', 'st.sales_agent_id')
             ->where('st.id', $id)
             ->selectRaw(
@@ -291,8 +254,8 @@ class ReportController
             return response()->json(['message' => 'Transaksi tidak ditemukan'], 404);
         }
 
-        // Total retur (pakai header delivery_returns.total_amount kalau ada)
-        $returnTotal = DB::table('delivery_returns as dr')->where('dr.sales_transaction_id', $id)->sum('dr.total_amount');
+        // Retur dinonaktifkan
+        $returnTotal = 0;
 
         // Items
         $items = DB::table('sales_transaction_items as sti')
@@ -332,8 +295,7 @@ class ReportController
     {
         // header transaksi
         $h = DB::table('sales_transactions as st')
-            ->leftJoin('purchase_orders as po', 'po.id', '=', 'st.purchase_order_id')
-            ->leftJoin('customers as c', 'c.id', '=', 'po.customer_id')
+            ->leftJoin('customers as c', 'c.id', '=', 'st.customer_id')
             ->leftJoin('sales_agents as sa', 'sa.id', '=', 'st.sales_agent_id')
             ->where('st.id', $id)
             ->selectRaw(
@@ -355,8 +317,8 @@ class ReportController
             abort(404, 'Transaksi tidak ditemukan');
         }
 
-        // total retur
-        $returnTotal = DB::table('delivery_returns as dr')->where('dr.sales_transaction_id', $id)->sum('dr.total_amount');
+        // total retur dinonaktifkan
+        $returnTotal = 0;
 
         // items
         $items = DB::table('sales_transaction_items as sti')

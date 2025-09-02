@@ -4,8 +4,7 @@ namespace App\Models;
 
 use App\Models\Admin;
 use App\Models\SalesAgent;
-use App\Models\PurchaseOrder;
-use App\Models\DeliveryReturn;
+use App\Models\Customer;
 use App\Models\SalesTransactionItem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,23 +12,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SalesTransaction extends Model
 {
-    protected $fillable = [
-        'purchase_order_id',
-        'admin_id',
-        'sales_agent_id',
-        'invoice_id',
-        'invoice_date',
-        'discount_percent',
-        'initial_total_amount',
-        'final_total_amount',
-        'note',
-        'transaction_status',
-        'delivery_confirmed_at'
-    ];
+    protected $fillable = ['customer_id', 'admin_id', 'sales_agent_id', 'order_date', 'invoice_id', 'invoice_date', 'discount_percent', 'initial_total_amount', 'final_total_amount', 'note', 'transaction_status', 'cancel_note', 'delivery_confirmed_at'];
 
-    public function purchase_order(): BelongsTo
+    public function customer(): BelongsTo
     {
-        return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     public function admin(): BelongsTo
@@ -47,8 +34,5 @@ class SalesTransaction extends Model
         return $this->hasMany(SalesTransactionItem::class, 'sales_transaction_id');
     }
 
-    public function delivery_returns(): HasMany
-    {
-        return $this->hasMany(DeliveryReturn::class, 'sales_transaction_id');
-    }
+    // Relasi delivery_returns dihapus (fitur retur dinonaktifkan)
 }

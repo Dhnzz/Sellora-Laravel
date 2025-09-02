@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Models\SalesTransaction;
 use App\Models\SupplierPurchase;
+use Illuminate\Support\Facades\DB;
+use App\Models\SalesTransactionItem;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 class OwnerController
 {
     public function dashboard()
     {
-        $omset = SalesTransaction::sum('final_total_amount');
+        $base = SalesTransaction::where('transaction_status', '=', 'success');
+        $omset = $base->sum('final_total_amount');
         $expense = SupplierPurchase::sum('total_amount');
         $income = $omset - $expense;
 

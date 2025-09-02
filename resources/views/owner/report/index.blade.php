@@ -19,8 +19,10 @@
                         <label class="form-label">Status</label>
                         <select name="status" class="form-select">
                             <option value="">Semua</option>
-                            <option value="success">Success</option>
-                            <option value="process">Process</option>
+                            <option value="pending">Menunggu Konfirmasi</option>
+                            <option value="process">Diproses</option>
+                            <option value="success">Berhasil</option>
+                            <option value="cancelled">Dibatalkan</option>
                         </select>
                     </div>
 
@@ -51,7 +53,15 @@
         </div>
 
         {{-- KPI CARDS --}}
-        <div class="row g-3 mb-4 justify-content-center" id="kpiCards">
+        <div class="row g-3 mb-4 justify-content-start" id="kpiCards">
+            <div class="col-6 col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small">Jumlah Transaksi</div>
+                        <div class="fs-4 fw-semibold" id="kpiTrx">-</div>
+                    </div>
+                </div>
+            </div>
             <div class="col-6 col-md-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
@@ -73,22 +83,6 @@
                     <div class="card-body">
                         <div class="text-muted small">Net Sales</div>
                         <div class="fs-4 fw-semibold" id="kpiNet">-</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="text-muted small">Retur</div>
-                        <div class="fs-4 fw-semibold" id="kpiReturn">-</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="text-muted small">Jumlah Transaksi</div>
-                        <div class="fs-4 fw-semibold" id="kpiTrx">-</div>
                     </div>
                 </div>
             </div>
@@ -360,10 +354,14 @@
                         className: 'text-center',
                         render: s => {
                             switch ((s || '').toLowerCase()) {
-                                case 'success':
-                                    return '<span class="badge bg-success">Lunas</span>';
+                                case 'pending':
+                                    return '<span class="badge bg-warning">Menunggu Konfirmasi</span>';
                                 case 'process':
-                                    return '<span class="badge bg-warning">Diproses</span>';
+                                    return '<span class="badge bg-info">Diproses</span>';
+                                case 'success':
+                                    return '<span class="badge bg-success">Berhasil</span>';
+                                case 'cancelled':
+                                    return '<span class="badge bg-danger">Dibatalkan</span>';
                                 default:
                                     return '-';
                             }
@@ -605,7 +603,6 @@
                         $('#kpiGross').text('Rp ' + fmtIDR(res.cards?.gross));
                         $('#kpiDiscount').text('Rp ' + fmtIDR(res.cards?.discount));
                         $('#kpiTax').text('Rp ' + fmtIDR(res.cards?.tax));
-                        $('#kpiReturn').text('Rp ' + fmtIDR(res.cards?.return_total));
                         $('#kpiNet').text('Rp ' + fmtIDR(res.cards?.net_sales));
                         $('#kpiTrx').text(fmtIDR(res.cards?.trx_count));
                         $('#kpiAov').text('Rp ' + fmtIDR(res.cards?.aov));
@@ -645,11 +642,38 @@
                         $('#invDate').text(fmtDate(h.date));
                         $('#invCustomer').text(h.customer || '-');
                         $('#invSales').text(h.sales || '-');
-                        $('#invStatus').text((h.status || '-').toUpperCase())
-                            .removeClass('bg-secondary bg-success bg-warning')
+
+                        // Status Detail Badge
+                        const status = [];
+                        switch (h.status) {
+                            case 'pending':
+                                status['badge'] = 'bg-warning';
+                                status['msg'] = 'Menunggu Konfirmasi';
+                                break;
+                            case 'process':
+                                status['badge'] = 'bg-info';
+                                status['msg'] = 'Diproses';
+                                break;
+                            case 'success':
+                                status['badge'] = 'bg-success';
+                                status['msg'] = 'Berhasil';
+                                break;
+                            case 'cancelled':
+                                status['badge'] = 'bg-danger';
+                                status['msg'] = 'Dibatalkan';
+                                break;
+                            default:
+                                status['badge'] = 'bg-secondary';
+                                status['msg'] = 'Unknown Status';
+                                break;
+                        }
+
+                        $('#invStatus').text((status['msg'] || '-').toUpperCase())
+                            .removeClass('bg-secondary bg-success bg-warning bg-warning bg-danger bg-info')
                             .addClass(
-                                (h.status || '').toLowerCase() === 'success' ? 'bg-success' :
-                                (h.status || '').toLowerCase() === 'process' ? 'bg-warning' : 'bg-secondary'
+                                status['badge']
+                                // (h.status || '').toLowerCase() === 'success' ? 'bg-success' :
+                                // (h.status || '').toLowerCase() === 'process' ? 'bg-warning' : 'bg-secondary'
                             );
 
                         // items
@@ -673,7 +697,6 @@
                         // footer totals
                         $('#fSubtotal').text(fmtIDR(h.subtotal || 0));
                         $('#fDiscount').text(fmtIDR(h.discount || 0));
-                        $('#fReturn').text(fmtIDR(h.return || 0));
                         // grand total: total (setelah diskon) - retur
                         const grand = Number(h.total || 0) - Number(h.return || 0);
                         $('#fGrand').text(fmtIDR(grand));

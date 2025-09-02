@@ -2,96 +2,166 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PurchaseOrder;
+use Carbon\Carbon;
 use App\Models\SalesTransaction;
-use App\Models\SalesTransactionItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\Facades\DataTables;
 
 class AdminOrderController
 {
     public function index()
     {
-        $orders = PurchaseOrder::with(['customer', 'purchase_order_items.product'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $data = [
+            'role' => Auth::user()->getRoleNames()->first(),
+            'breadcrumbs' => [
+                [
+                    'name' => 'Manajemen Pesanan',
+                    'link' => route('admin.orders.index'),
+                ],
+            ],
+        ];
 
-        return view('admin.orders.index', compact('orders'));
+        return view('admin.orders.index', compact('data'));
     }
 
-    public function show(PurchaseOrder $order)
+    public function getAll(Request $request)
     {
-        $order->load(['customer', 'purchase_order_items.product.product_brand']);
+        if ($request->ajax()) {
+            // Ambil data transaksi penjualan dengan relasi
+            $query = SalesTransaction::with(['customer', 'sales_agent', 'sales_transaction_items'])->select('sales_transactions.*');
 
-        return view('admin.orders.show', compact('order'));
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('customer_name', function ($row) {
+                    return $row->customer ? $row->customer->name : 'N/A';
+                })
+                ->addColumn('customer_phone', function ($row) {
+                    return $row->customer ? $row->customer->phone : 'N/A';
+                })
+                ->addColumn('status_label', function ($row) {
+                    $status = $row->transaction_status;
+                    $badge = '';
+
+                    if ($status === 'pending') {
+                        $badge = '<span class="badge bg-warning">Menunggu Konfirmasi</span>';
+                    } elseif ($status === 'process') {
+                        $badge = '<span class="badge bg-info">Sedang Diproses</span>';
+                    } elseif ($status === 'success') {
+                        $badge = '<span class="badge bg-success">Selesai</span>';
+                    } elseif ($status === 'cancelled') {
+                        $badge = '<span class="badge bg-danger">Dibatalkan</span>';
+                    }
+
+                    return $badge;
+                })
+                ->addColumn('actions', function ($row) {
+                    $btn = '<div class="btn-group btn-group-sm">';
+                    $btn .= '<button type="button" class="btn btn-outline-primary view-order" data-order-id="' . $row->id . '"><i class="ti ti-eye"></i></button>';
+
+                    if ($row->transaction_status === 'pending') {
+                        $btn .= '<button class="btn btn-outline-success confirm-order" data-order-id="' . $row->id . '"><i class="ti ti-check"></i></button>';
+                    }
+
+                    $btn .= '</div>';
+                    return $btn;
+                })
+                ->editColumn('invoice_date', function ($row) {
+                    return Carbon::parse($row->invoice_date)->format('d/m/Y');
+                })
+                ->editColumn('delivery_confirmed_at', function ($row) {
+                    return $row->delivery_confirmed_at ? Carbon::parse($row->delivery_confirmed_at)->format('d/m/Y') : 'N/A';
+                })
+                ->editColumn('final_total_amount', function ($row) {
+                    return 'Rp ' . number_format($row->final_total_amount, 0, ',', '.');
+                })
+                ->rawColumns(['status_label', 'actions'])
+                ->make(true);
+        }
     }
-
-    public function confirm(PurchaseOrder $order)
+    
+    /**
+     * Menampilkan detail pesanan dalam format JSON untuk modal
+     * 
+     * @param Request $request
+     * @param int $order ID pesanan
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show(Request $request, $order)
     {
-        if ($order->status !== 'pending') {
+        if ($request->ajax()) {
+            // Ambil data transaksi dengan relasi yang dibutuhkan
+            $transaction = SalesTransaction::with([
+                'customer',
+                'sales_agent',
+                'sales_transaction_items.product.product_unit',
+                'sales_transaction_items.product.product_brand'
+            ])->findOrFail($order);
+            
+            // Format data untuk ditampilkan di modal
+            $formattedData = [
+                'id' => $transaction->id,
+                'invoice_id' => $transaction->invoice_id,
+                'customer' => [
+                    'name' => $transaction->customer ? $transaction->customer->name : 'N/A',
+                    'phone' => $transaction->customer ? $transaction->customer->phone : 'N/A',
+                    'address' => $transaction->customer ? $transaction->customer->address : 'N/A',
+                ],
+                'sales_agent' => $transaction->sales_agent ? $transaction->sales_agent->name : 'N/A',
+                'order_date' => Carbon::parse($transaction->order_date)->format('d/m/Y'),
+                'invoice_date' => Carbon::parse($transaction->invoice_date)->format('d/m/Y'),
+                'delivery_confirmed_at' => $transaction->delivery_confirmed_at ? Carbon::parse($transaction->delivery_confirmed_at)->format('d/m/Y') : 'N/A',
+                'discount_percent' => $transaction->discount_percent * 100,
+                'initial_total_amount' => 'Rp ' . number_format($transaction->initial_total_amount, 0, ',', '.'),
+                'final_total_amount' => 'Rp ' . number_format($transaction->final_total_amount, 0, ',', '.'),
+                'note' => $transaction->note,
+                'status' => $transaction->transaction_status,
+                'status_label' => $this->getStatusLabel($transaction->transaction_status),
+                'cancel_note' => $transaction->cancel_note,
+                'items' => []
+            ];
+            
+            // Format data item pesanan
+            foreach ($transaction->sales_transaction_items as $item) {
+                $formattedData['items'][] = [
+                    'product_name' => $item->product->name,
+                    'product_brand' => $item->product->product_brand->name,
+                    'quantity' => $item->quantity_sold,
+                    'unit' => $item->product->product_unit->name,
+                    'discount' => $item->product->discount,
+                    'price' => 'Rp ' . number_format($item->msu_price, 0, ',', '.'),
+                    'subtotal' => 'Rp ' . number_format($item->product->discount > 0.00 ? ($item->msu_price - ($item->msu_price * $item->product->discount)) * $item->quantity_sold : $item->quantity_sold * $item->msu_price, 0, ',', '.'),
+                ];
+            }
+            
             return response()->json([
-                'success' => false,
-                'message' => 'Order sudah dikonfirmasi atau dibatalkan',
+                'success' => true,
+                'data' => $formattedData
             ]);
         }
-
-        DB::transaction(function () use ($order) {
-            // Update status PO
-            $order->update(['status' => 'confirmed']);
-
-            // Hitung total
-            $total = 0;
-            foreach ($order->purchase_order_items as $item) {
-                $total += $item->quantity_ordered * $item->unit_price;
-            }
-
-            // Buat Sales Transaction
-            $salesTransaction = SalesTransaction::create([
-                'purchase_order_id' => $order->id,
-                'admin_id' => Auth::id(),
-                'sales_agent_id' => null, // Bisa diisi jika ada sales agent
-                'invoice_id' => 'INV-' . date('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT),
-                'invoice_date' => now(),
-                'discount_percent' => 0,
-                'initial_total_amount' => $total,
-                'final_total_amount' => $total,
-                'note' => 'Order dari customer: ' . $order->customer->name,
-                'transaction_status' => 'pending', // pending, completed, cancelled
-            ]);
-
-            // Buat Sales Transaction Items
-            foreach ($order->purchase_order_items as $item) {
-                SalesTransactionItem::create([
-                    'sales_transaction_id' => $salesTransaction->id,
-                    'product_id' => $item->product_id,
-                    'quantity_ordered' => $item->quantity_ordered,
-                    'quantity_sold' => $item->quantity_ordered,
-                    'msu_price' => $item->unit_price,
-                ]);
-            }
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Order berhasil dikonfirmasi dan Sales Transaction dibuat',
-        ]);
+        
+        // Jika bukan request AJAX, redirect ke halaman index
+        return redirect()->route('admin.orders.index');
     }
-
-    public function cancel(PurchaseOrder $order)
+    
+    /**
+     * Mendapatkan label status dalam format HTML
+     * 
+     * @param string $status
+     * @return string
+     */
+    private function getStatusLabel($status)
     {
-        if ($order->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order tidak dapat dibatalkan',
-            ]);
+        if ($status === 'pending') {
+            return '<span class="badge bg-warning">Menunggu Konfirmasi</span>';
+        } elseif ($status === 'process') {
+            return '<span class="badge bg-info">Sedang Diproses</span>';
+        } elseif ($status === 'success') {
+            return '<span class="badge bg-success">Selesai</span>';
+        } elseif ($status === 'cancelled') {
+            return '<span class="badge bg-danger">Dibatalkan</span>';
         }
-
-        $order->update(['status' => 'cancelled']);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Order berhasil dibatalkan',
-        ]);
+        
+        return '<span class="badge bg-secondary">Unknown</span>';
     }
 }

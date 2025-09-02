@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SalesTransaction;
 use Hash;
 use Carbon\Carbon;
 use App\Models\User;
@@ -19,6 +20,10 @@ class AdminController
 {
     public function dashboard()
     {
+        $totalPendingSt = SalesTransaction::where('transaction_status', '=', 'pending')->count();
+        $totalProcessSt = SalesTransaction::where('transaction_status', '=', 'process')->count();
+        $totalSuccessSt = SalesTransaction::where('transaction_status', '=', 'success')->count();
+        $totalCancelledSt = SalesTransaction::where('transaction_status', '=', 'cancelled')->count();
         $data = [
             'role' => Auth::user()->getRoleNames()->first(),
             'active' => 'dashboard',
@@ -28,6 +33,10 @@ class AdminController
                     'link' => route('owner.dashboard'),
                 ],
             ],
+            'totalPending' => $totalPendingSt,
+            'totalProcess' => $totalProcessSt,
+            'totalSuccess' => $totalSuccessSt,
+            'totalCancelled' => $totalCancelledSt,
         ];
         return view('admin.dashboard', compact('data'));
     }

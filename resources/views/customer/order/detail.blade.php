@@ -3,7 +3,7 @@
         {{-- Order Header --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h6 class="mb-1">Order #</h6>
+                <h6 class="mb-1">Order <b>#{{ $orderData->order_number }}</b></h6>
                 <small
                     class="text-muted">{{ \Carbon\Carbon::parse($orderData->order_date)->format('d M Y H:i') }}</small>
             </div>
@@ -79,7 +79,7 @@
                                             </div>
                                         </td>
                                         <td class="text-end">Rp {{ number_format($item->price, 0, ',', '.') }}</td>
-                                        <td class="text-center">{{ $item->product->discount > 0.00 ? $item->product->discount * 100 . '%' : '-' }}</td>
+                                        <td class="text-center" width="150px">{{ $item->product->discount > 0.00 ? $item->product->discount * 100 . '%' : '-' }}</td>
                                         <td class="text-center">Rp. {{ number_format($item->net_price, 0, ',', '.') }}</td>
                                         <td class="text-center">{{ $item->quantity }}</td>
                                         <td class="text-end fw-semibold">Rp
@@ -198,8 +198,9 @@
     {
         $statusMap = [
             'pending' => '<span class="badge bg-warning">Menunggu Konfirmasi</span>',
-            'confirmed' => '<span class="badge bg-success">Dikonfirmasi</span>',
-            'cancelled' => '<span class="badge bg-danger">Ditolak</span>',
+            'process' => '<span class="badge bg-success">Proses Pengantaran</span>',
+            'cancelled' => '<span class="badge bg-danger">Dibatalkan</span>',
+            'success' => '<span class="badge bg-success">Berhasil</span>',
         ];
         return $statusMap[$status] ?? '<span class="badge bg-secondary">Unknown</span>';
     }

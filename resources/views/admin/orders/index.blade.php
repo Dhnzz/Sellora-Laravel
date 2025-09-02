@@ -11,82 +11,142 @@
                         <h4 class="card-title">Daftar Pesanan Customer</h4>
                     </div>
                     <div class="card-body">
-                        @if ($orders->isEmpty())
-                            <div class="text-center py-5">
-                                <i class="ti ti-shopping-cart" style="font-size: 4rem; color: #ccc;"></i>
-                                <h6 class="mt-3 text-muted">Belum ada pesanan</h6>
-                            </div>
-                        @else
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Customer</th>
-                                            <th>Tanggal Order</th>
-                                            <th>Tanggal Pengiriman</th>
-                                            <th>Total Item</th>
-                                            <th>Total Harga</th>
-                                            <th>Status</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($orders as $order)
-                                            @php
-                                                $totalItems = $order->purchase_order_items->sum('quantity_ordered');
-                                                $totalPrice = $order->purchase_order_items->sum(function ($item) {
-                                                    return $item->quantity_ordered * $item->unit_price;
-                                                });
-                                            @endphp
-                                            <tr>
-                                                <td>#{{ $order->id }}</td>
-                                                <td>
-                                                    <div class="fw-semibold">{{ $order->customer->name }}</div>
-                                                    <small class="text-muted">{{ $order->customer->phone }}</small>
-                                                </td>
-                                                <td>{{ $order->order_date->format('d/m/Y H:i') }}</td>
-                                                <td>{{ $order->delivery_date->format('d/m/Y') }}</td>
-                                                <td>{{ $totalItems }} item</td>
-                                                <td>Rp {{ number_format($totalPrice, 0, ',', '.') }}</td>
-                                                <td>
-                                                    @if ($order->status === 'pending')
-                                                        <span class="badge bg-warning">Menunggu Konfirmasi</span>
-                                                    @elseif($order->status === 'confirmed')
-                                                        <span class="badge bg-success">Dikonfirmasi</span>
-                                                    @elseif($order->status === 'cancelled')
-                                                        <span class="badge bg-danger">Dibatalkan</span>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group btn-group-sm">
-                                                        <a href="{{ route('admin.orders.show', $order->id) }}"
-                                                            class="btn btn-outline-primary">
-                                                            <i class="ti ti-eye"></i>
-                                                        </a>
-                                                        @if ($order->status === 'pending')
-                                                            <button class="btn btn-outline-success confirm-order"
-                                                                data-order-id="{{ $order->id }}">
-                                                                <i class="ti ti-check"></i>
-                                                            </button>
-                                                            <button class="btn btn-outline-danger cancel-order"
-                                                                data-order-id="{{ $order->id }}">
-                                                                <i class="ti ti-x"></i>
-                                                            </button>
-                                                        @endif
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="orders-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nomor Invoice</th>
+                                        <th>Customer</th>
+                                        <th>Tanggal Order</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data akan diisi oleh DataTables -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detail Pesanan -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1" aria-labelledby="orderDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="orderDetailModalLabel">Detail Pesanan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center" id="orderDetailLoading">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <div id="orderDetailContent" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Informasi Pesanan</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Nomor Invoice</td>
+                                        <td>: <span id="invoice-id"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Tanggal Order</td>
+                                        <td>: <span id="order-date"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Tanggal Invoice</td>
+                                        <td>: <span id="invoice-date"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Status</td>
+                                        <td>: <span id="order-status"></span></td>
+                                    </tr>
                                 </table>
                             </div>
-
-                            <div class="mt-3">
-                                {{ $orders->links() }}
+                            <div class="col-md-6">
+                                <h6>Informasi Customer</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Nama</td>
+                                        <td>: <span id="customer-name"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Telepon</td>
+                                        <td>: <span id="customer-phone"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Alamat</td>
+                                        <td>: <span id="customer-address"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Sales Agent</td>
+                                        <td>: <span id="sales-agent"></span></td>
+                                    </tr>
+                                </table>
                             </div>
-                        @endif
+                        </div>
+
+                        <h6>Detail Item</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm" id="order-items-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Produk</th>
+                                        <th>Brand</th>
+                                        <th>Jumlah</th>
+                                        <th>Harga</th>
+                                        <th>Diskon</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="order-items-body">
+                                    <!-- Item pesanan akan diisi oleh JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3" id="note-container">
+                                    <h6>Catatan</h6>
+                                    <p id="order-note">-</p>
+                                </div>
+                                <div class="mb-3" id="cancel-note-container" style="display: none;">
+                                    <h6>Alasan Pembatalan</h6>
+                                    <p id="cancel-note">-</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Diskon</td>
+                                        <td>: <span id="discount-percent"></span>%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total Awal</td>
+                                        <td>: <span id="initial-total"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Total Akhir</strong></td>
+                                        <td>: <strong><span id="final-total"></span></strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
                     </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
@@ -96,12 +156,60 @@
 @push('scripts')
     <script>
         $(function() {
-            $('.confirm-order').on('click', function() {
+            // Inisialisasi DataTable dengan AJAX
+            $('#orders-table').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: "{{ route('admin.orders.data') }}",
+                columns: [{
+                        data: 'DT_RowIndex',
+                        name: 'DT_RowIndex',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'invoice_id',
+                        name: 'invoice_id'
+                    },
+                    {
+                        data: 'customer_name',
+                        name: 'customer_name',
+                        render: function(data, type, row) {
+                            return '<div class="fw-semibold">' + data + '</div>' +
+                                '<small class="text-muted">' + row.customer_phone + '</small>';
+                        }
+                    },
+                    {
+                        data: 'invoice_date',
+                        name: 'invoice_date',
+                    },
+                    {
+                        data: 'final_total_amount',
+                        name: 'final_total_amount'
+                    },
+                    {
+                        data: 'status_label',
+                        name: 'transaction_status'
+                    },
+                    {
+                        data: 'actions',
+                        name: 'actions',
+                        orderable: false,
+                        searchable: false
+                    }
+                ],
+                order: [
+                    [1, 'desc']
+                ],
+            });
+
+            // Event handler untuk tombol konfirmasi dan pembatalan
+            $(document).on('click', '.confirm-order', function() {
                 const orderId = $(this).data('order-id');
                 const btn = $(this);
 
                 if (confirm(
-                        'Yakin ingin mengkonfirmasi pesanan ini? Ini akan membuat Sales Transaction.')) {
+                    'Yakin ingin mengkonfirmasi pesanan ini? Ini akan membuat Sales Transaction.')) {
                     btn.prop('disabled', true);
 
                     $.ajax({
@@ -113,7 +221,7 @@
                         success: function(response) {
                             if (response.success) {
                                 toastr.success(response.message);
-                                location.reload();
+                                $('#orders-table').DataTable().ajax.reload();
                             } else {
                                 toastr.error(response.message);
                             }
@@ -128,36 +236,88 @@
                 }
             });
 
-            $('.cancel-order').on('click', function() {
+            // Event handler untuk tombol lihat detail pesanan
+            $(document).on('click', '.view-order', function() {
                 const orderId = $(this).data('order-id');
-                const btn = $(this);
 
-                if (confirm('Yakin ingin membatalkan pesanan ini?')) {
-                    btn.prop('disabled', true);
+                // Reset dan tampilkan loading
+                $('#orderDetailContent').hide();
+                $('#orderDetailLoading').show();
+                $('#orderDetailModal').modal('show');
 
-                    $.ajax({
-                        url: `/admin/orders/${orderId}/cancel`,
-                        method: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}'
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                toastr.success(response.message);
-                                location.reload();
+                // Ambil data detail pesanan dengan AJAX
+                $.ajax({
+                    url: `/admin/orders/${orderId}`,
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            const data = response.data;
+
+                            // Isi data ke dalam modal
+                            $('#invoice-id').text(data.invoice_id);
+                            $('#order-date').text(data.order_date);
+                            $('#invoice-date').text(data.invoice_date);
+                            $('#order-status').html(data.status_label);
+
+                            $('#customer-name').text(data.customer.name);
+                            $('#customer-phone').text(data.customer.phone);
+                            $('#customer-address').text(data.customer.address);
+                            $('#sales-agent').text(data.sales_agent);
+
+                            $('#discount-percent').text(data.discount_percent);
+                            $('#initial-total').text(data.initial_total_amount);
+                            $('#final-total').text(data.final_total_amount);
+
+                            // Isi catatan jika ada
+                            if (data.note) {
+                                $('#order-note').text(data.note);
+                                $('#note-container').show();
                             } else {
-                                toastr.error(response.message);
+                                $('#note-container').hide();
                             }
-                        },
-                        error: function() {
-                            toastr.error('Terjadi kesalahan');
-                        },
-                        complete: function() {
-                            btn.prop('disabled', false);
+
+                            // Tampilkan alasan pembatalan jika status cancelled
+                            if (data.status === 'cancelled' && data.cancel_note) {
+                                $('#cancel-note').text(data.cancel_note);
+                                $('#cancel-note-container').show();
+                            } else {
+                                $('#cancel-note-container').hide();
+                            }
+
+                            // Isi tabel item pesanan
+                            let itemsHtml = '';
+                            data.items.forEach((item, index) => {
+                                itemsHtml += `
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td>${item.product_name}</td>
+                                        <td>${item.product_brand}</td>
+                                        <td>${item.quantity} ${item.unit}</td>
+                                        <td>${item.price}</td>
+                                        <td>${item.discount * 100}%</td>
+                                        <td>${item.subtotal}</td>
+                                    </tr>
+                                `;
+                            });
+                            $('#order-items-body').html(itemsHtml);
+
+                            // Sembunyikan loading dan tampilkan konten
+                            $('#orderDetailLoading').hide();
+                            $('#orderDetailContent').show();
+                        } else {
+                            toastr.error('Gagal memuat data pesanan');
+                            $('#orderDetailModal').modal('hide');
                         }
-                    });
-                }
+                    },
+                    error: function() {
+                        toastr.error('Terjadi kesalahan saat memuat data');
+                        $('#orderDetailModal').modal('hide');
+                    }
+                });
             });
+
+            // Utility
         });
     </script>
 @endpush

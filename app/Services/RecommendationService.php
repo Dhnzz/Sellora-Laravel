@@ -17,8 +17,7 @@ class RecommendationService
     {
         \Log::info('Recompute FP-Growth per-customer: start', ['customer_id' => $customer->id]);
         $transactions = SalesTransaction::query()
-            ->join('purchase_orders', 'purchase_orders.id', '=', 'sales_transactions.purchase_order_id')
-            ->where('purchase_orders.customer_id', $customer->id)
+            ->where('customer_id', $customer->id)
             ->with(['sales_transaction_items'])
             ->get(['sales_transactions.id', 'sales_transactions.invoice_id']);
 

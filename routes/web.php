@@ -1,33 +1,29 @@
 <?php
 
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\RoleController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\FrontController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\SalesAgentController;
 use App\Http\Controllers\ShopBundleController;
 use App\Http\Controllers\ProductUnitController;
 use App\Http\Controllers\ProductBrandController;
 use App\Http\Controllers\ProductBundleController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\UnitConvertionController;
-use App\Http\Controllers\SalesTransactionController;
 use App\Http\Controllers\WarehouseManagerController;
-use App\Http\Controllers\RevenuePredictionController;
 use App\Http\Controllers\MonthlyBookClosingController;
 use App\Http\Controllers\MonthlyClosingImportController;
 use App\Http\Controllers\MonthlyRevenuePredictionController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\AdminOrderController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -293,12 +289,18 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/profile/{admin}', [AdminController::class, 'edit'])->name('profile');
             Route::put('/profile/update/{admin}', [AdminController::class, 'update'])->name('profile.update');
             Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+            Route::get('/dashboard/data', [AdminDashboardController::class, 'filterData'])->name('dashboard.data');
+            Route::get('/dashboard/sales-chart', [AdminDashboardController::class, 'salesChartData'])->name('dashboard.sales_chart');
+            Route::get('/dashboard/top-sales', [AdminDashboardController::class, 'topSalesData'])->name('dashboard.top_sales');
+            Route::get('/dashboard/latest', [AdminDashboardController::class, 'latest'])->name('dashboard.latest');
 
+            // Orders Management
             // Orders Management
             Route::prefix('orders')
                 ->name('orders.')
                 ->group(function () {
                     Route::get('/', [AdminOrderController::class, 'index'])->name('index');
+                    Route::get('/data', [AdminOrderController::class, 'getAll'])->name('data'); // Rute baru untuk AJAX
                     Route::get('/{order}', [AdminOrderController::class, 'show'])->name('show');
                     Route::post('/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('confirm');
                     Route::post('/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('cancel');
@@ -383,6 +385,7 @@ Route::middleware(['auth'])->group(function () {
                 ->name('cart.')
                 ->group(function () {
                     Route::get('/', [CartController::class, 'index'])->name('index');
+                    Route::get('/data', [CartController::class, 'getCartData'])->name('data');
                     Route::post('/add', [CartController::class, 'add'])->name('add');
                     Route::put('/update', [CartController::class, 'update'])->name('update');
                     Route::delete('/remove', [CartController::class, 'remove'])->name('remove');
@@ -403,6 +406,7 @@ Route::middleware(['auth'])->group(function () {
                     Route::get('/', [OrderController::class, 'index'])->name('index');
                     Route::get('/data', [OrderController::class, 'data'])->name('data');
                     Route::get('/{id}', [OrderController::class, 'show'])->name('show');
+                    Route::post('/cancelOrder/{id}', [OrderController::class, 'cancelOrder'])->name('cancelOrder');
                 });
 
             Route::prefix('bundle')
