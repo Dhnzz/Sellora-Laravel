@@ -301,6 +301,7 @@ Route::middleware(['auth'])->group(function () {
                 ->group(function () {
                     Route::get('/', [AdminOrderController::class, 'index'])->name('index');
                     Route::get('/data', [AdminOrderController::class, 'getAll'])->name('data'); // Rute baru untuk AJAX
+                    Route::get('/sales-agents', [AdminOrderController::class, 'salesAgents'])->name('sales_agents');
                     Route::get('/{order}', [AdminOrderController::class, 'show'])->name('show');
                     Route::post('/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('confirm');
                 });

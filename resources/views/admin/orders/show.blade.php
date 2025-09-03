@@ -51,7 +51,7 @@
                                         <td width="150">Status</td>
                                         <td>:
                                             @if ($order->status === 'pending')
-                                                <span class="badge bg-warning">Menunggu Konfirmasi</span>
+                                                <span class="badge bg-warning">Pending</span>
                                             @elseif($order->status === 'confirmed')
                                                 <span class="badge bg-success">Dikonfirmasi</span>
                                             @elseif($order->status === 'cancelled')

@@ -146,7 +146,33 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="tutupModalDetail" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary btn-tutup-detail-modal" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Konfirmasi & Assign Sales Agent -->
+    <div class="modal fade" id="confirmAssignModal" tabindex="-1" aria-labelledby="confirmAssignModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmAssignModalLabel">Konfirmasi Pesanan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="confirm-order-id">
+                    <div class="mb-3">
+                        <label for="select-sales-agent" class="form-label">Tugaskan Sales Agent</label>
+                        <select id="select-sales-agent" class="form-select">
+                            <option value="auto">Pilih otomatis (order aktif paling sedikit)</option>
+                        </select>
+                        <div class="form-text">Pilih manual atau gunakan opsi otomatis.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-assign">Konfirmasi</button>
                 </div>
             </div>
         </div>
@@ -189,7 +215,8 @@
                     },
                     {
                         data: 'status_label',
-                        name: 'transaction_status'
+                        name: 'transaction_status',
+                        width: '120px'
                     },
                     {
                         data: 'actions',
@@ -199,41 +226,65 @@
                     }
                 ],
                 order: [
-                    [1, 'desc']
+                    ['created_at', 'desc']
                 ],
             });
 
-            // Event handler untuk tombol konfirmasi dan pembatalan
+            // Event handler: buka modal assign sales agent saat klik konfirmasi
             $(document).on('click', '.confirm-order', function() {
                 const orderId = $(this).data('order-id');
+                $('#confirm-order-id').val(orderId);
+                const $select = $('#select-sales-agent');
+                $select.empty().append(
+                    '<option value="auto">Pilih otomatis (order aktif paling sedikit)</option>');
+
+                $.get('/admin/orders/sales-agents', function(resp) {
+                    if (resp.success) {
+                        resp.data.forEach(function(agent) {
+                            $select.append(
+                                `<option value="${agent.id}">${agent.name} (aktif: ${agent.active_orders})</option>`
+                            );
+                        });
+                    }
+                    $('#confirmAssignModal').modal('show');
+                }).fail(function() {
+                    toastr.error('Gagal memuat daftar sales agent');
+                    $('#confirmAssignModal').modal('show');
+                });
+            });
+
+            // Submit konfirmasi
+            $('#btn-confirm-assign').on('click', function() {
+                const orderId = $('#confirm-order-id').val();
+                const salesAgentId = $('#select-sales-agent').val();
                 const btn = $(this);
+                btn.prop('disabled', true);
 
-                if (confirm(
-                        'Yakin ingin mengkonfirmasi pesanan ini? Ini akan membuat Sales Transaction.')) {
-                    btn.prop('disabled', true);
-
-                    $.ajax({
+                $.ajax({
                         url: `/admin/orders/${orderId}/confirm`,
                         method: 'POST',
                         data: {
-                            _token: '{{ csrf_token() }}'
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                toastr.success(response.message);
-                                $('#orders-table').DataTable().ajax.reload();
-                            } else {
-                                toastr.error(response.message);
-                            }
-                        },
-                        error: function() {
-                            toastr.error('Terjadi kesalahan');
-                        },
-                        complete: function() {
-                            btn.prop('disabled', false);
+                            _token: '{{ csrf_token() }}',
+                            sales_agent_id: salesAgentId
                         }
+                    })
+                    .done(function(resp) {
+                        if (resp.success) {
+                            toastr.success(resp.message);
+                            $('#confirmAssignModal').modal('hide');
+                            $('#orders-table').DataTable().ajax.reload();
+                        } else {
+                            toastr.error(resp.message || 'Gagal konfirmasi pesanan');
+                        }
+                    })
+                    .fail(function(xhr) {
+                        const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON
+                            .message : 'Terjadi kesalahan';
+                        toastr.error(msg);
+                    })
+                    .always(function() {
+                        btn.prop('disabled', false);
                     });
-                }
             });
 
             // Event handler untuk tombol lihat detail pesanan
@@ -244,8 +295,7 @@
                 $('#orderDetailContent').hide();
                 $('#orderDetailLoading').show();
                 $('#orderDetailModal').modal('show');
-                // Hapus tombol .confirm-order di dalam .modal-footer sebelum menambahkannya lagi
-                $('.modal-footer .confirm-order').remove();
+                $('.btn-konfirmasi-order').remove();
 
                 // Ambil data detail pesanan dengan AJAX
                 $.ajax({
@@ -286,10 +336,10 @@
                                 $('#cancel-note-container').hide();
                             }
 
-                            if (data.status === 'pending'){
-                                // Tambahkan tombol sebelum tombol tutup di modal-footer
-                                $('#tutupModalDetail').before(
-                                    '<button type="button" class="btn btn-success me-2 confirm-order">Konfirmasi Pesanan</button>'
+                            if(data.status === 'pending'){
+                                $('.btn-tutup-detail-modal').before(
+                                    `<button type="button" class="btn btn-success btn-konfirmasi-order confirm-order" data-order-id="${orderId}">Konfirmasi Order</button>`
+
                                 );
                             }
 

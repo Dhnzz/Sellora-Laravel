@@ -19,7 +19,7 @@
                         <label class="form-label">Status</label>
                         <select name="status" class="form-select">
                             <option value="">Semua</option>
-                            <option value="pending">Menunggu Konfirmasi</option>
+                            <option value="pending">Pending</option>
                             <option value="process">Diproses</option>
                             <option value="success">Berhasil</option>
                             <option value="cancelled">Dibatalkan</option>
@@ -355,7 +355,7 @@
                         render: s => {
                             switch ((s || '').toLowerCase()) {
                                 case 'pending':
-                                    return '<span class="badge bg-warning">Menunggu Konfirmasi</span>';
+                                    return '<span class="badge bg-warning">Pending</span>';
                                 case 'process':
                                     return '<span class="badge bg-info">Diproses</span>';
                                 case 'success':
@@ -648,7 +648,7 @@
                         switch (h.status) {
                             case 'pending':
                                 status['badge'] = 'bg-warning';
-                                status['msg'] = 'Menunggu Konfirmasi';
+                                status['msg'] = 'Pending';
                                 break;
                             case 'process':
                                 status['badge'] = 'bg-info';
