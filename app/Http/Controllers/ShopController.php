@@ -6,12 +6,7 @@ use App\Models\Product;
 use App\Models\ProductBrand;
 use Illuminate\Http\Request;
 use App\Models\ProductBundle;
-use App\Services\ML\FpClient;
-use App\Models\SalesTransaction;
-use App\Models\ProductAssociation;
-use App\Models\SalesTransactionItem;
 use Illuminate\Support\Facades\Auth;
-use App\Models\ProductAssociationCustomer;
 use App\Services\RecommendationService;
 
 class ShopController
@@ -26,10 +21,9 @@ class ShopController
         // Rekomendasi: delegasikan ke service agar function tetap ringkas
         $recommendedProducts = collect();
         $user = Auth::user();
-        if ($user && isset($user->customer)) {
-            $recommendedProducts = app(RecommendationService::class)->getRecommendedProductsForCustomer($user->customer, 12);
+        if ($user && $user->getRoleNames()->first() == 'customer') {
+            $recommendedProducts = app(RecommendationService::class)->getRecommendedProductsForCustomer($user->customer, 10);
         }
-
         return view('customer.home', compact('bundles', 'discountProducts', 'recommendedProducts'));
     }
 
