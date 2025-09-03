@@ -23,7 +23,7 @@
     <div class="owl-carousel owl-theme mb-5" style="max-height: fit-content" id="discountProductsCarousel">
         @foreach ($discountProducts as $item)
             <div class="item">
-                <div class="card c-card h-100">
+                <div class="card c-card" style="width:270px; height: 265px;">
                     @if ($item->image != 'uploads/images/products/product-1.png')
                         <img src="{{ asset('storage/' . $item->image) }}" class="card-img-top" alt="{{ $item->name }}"
                             style="height:160px;object-fit:cover;">
@@ -57,7 +57,7 @@
         <div class="owl-carousel owl-theme mb-5" style="max-height: fit-content" id="recommendedProductsCarousel">
             @foreach ($recommendedProducts as $item)
                 <div class="item">
-                    <div class="card c-card h-100">
+                    <div class="card c-card" style="width:270px; height: 265px;">
                         @if ($item->image != 'uploads/images/products/product-1.png')
                             <img src="{{ asset('storage/' . $item->image) }}" class="card-img-top"
                                 alt="{{ $item->name }}" style="height:160px;object-fit:cover;">

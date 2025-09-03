@@ -6,139 +6,88 @@ use App\Models\Product;
 use App\Models\Customer;
 use App\Models\SalesTransaction;
 use App\Models\SalesTransactionItem;
-use App\Models\ProductAssociationCustomer;
 use App\Models\ProductAssociation;
-use App\Services\ML\FpClient;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class RecommendationService
 {
-    public function recomputeAssociationsForCustomer(Customer $customer): void
+    public function getRecommendedProductsForCustomer(Customer|int $customer, int $limit = 10): Collection
     {
-        \Log::info('Recompute FP-Growth per-customer: start', ['customer_id' => $customer->id]);
-        $transactions = SalesTransaction::query()
-            ->where('customer_id', $customer->id)
-            ->with(['sales_transaction_items'])
-            ->get(['sales_transactions.id', 'sales_transactions.invoice_id']);
-
-        if ($transactions->isEmpty()) {
-            \Log::info('Recompute FP-Growth per-customer: no transactions for customer', ['customer_id' => $customer->id]);
-            ProductAssociationCustomer::where('customer_id', $customer->id)->delete();
-            return;
-        }
-
-        $items = SalesTransactionItem::query()
-            ->whereIn('sales_transaction_id', $transactions->pluck('id'))
-            ->get(['sales_transaction_id', 'product_id'])
-            ->groupBy('sales_transaction_id');
-
-        $payload = [];
-        foreach ($transactions as $tx) {
-            $list = ($items[$tx->id] ?? collect())->pluck('product_id')->filter()->unique()->values()->map(fn($v) => (int) $v)->toArray();
-            // Hanya masukkan basket dengan minimal 2 item agar FP-Growth bisa membentuk aturan
-            if (count($list) >= 2) {
-                $payload[$tx->invoice_id] = $list;
-            }
-        }
-
-        ProductAssociationCustomer::where('customer_id', $customer->id)->delete();
-
-        if (empty($payload)) {
-            \Log::info('Recompute FP-Growth per-customer: empty payload after grouping items', ['customer_id' => $customer->id]);
-            return;
-        }
-
-        $fp = app(FpClient::class);
-        // Turunkan ambang agar peluang terbentuk aturan meningkat pada data kecil
-        $result = $fp->mineRules($payload, 0.01, 0.2, 200, 'confidence');
-        $rules = $result['rules'] ?? [];
-
-        \Log::info('Recompute FP-Growth per-customer: rules generated', [
-            'customer_id' => $customer->id,
-            'payload_tx' => count($payload),
-            'rules_count' => count($rules),
-        ]);
-        if (!empty($rules)) {
-            foreach ($rules as $assoc) {
-                ProductAssociationCustomer::create([
-                    'customer_id' => $customer->id,
-                    'atecedent_product_ids' => json_encode($assoc['antecedent_ids'] ?? []),
-                    'consequent_product_ids' => json_encode($assoc['consequent_ids'] ?? []),
-                    'support' => $assoc['support'] ?? 0,
-                    'confidence' => $assoc['confidence'] ?? 0,
-                    'lift' => $assoc['lift'] ?? 0,
-                    'analysis_date' => now()->toDateString(),
-                ]);
-            }
-        } else {
-            // Fallback: gunakan aturan global yang relevan dengan histori customer
-            $purchasedIds = collect($payload)->flatten()->unique()->values();
-
-            if ($purchasedIds->isNotEmpty()) {
-                $globalQ = ProductAssociation::query();
-                foreach ($purchasedIds as $pid) {
-                    $globalQ->orWhere('atecedent_product_ids', 'like', '%"' . (int) $pid . '"%');
-                }
-                $globalRules = $globalQ->get(['atecedent_product_ids', 'consequent_product_ids', 'support', 'confidence', 'lift']);
-
-                \Log::info('Recompute FP-Growth fallback to global rules', [
-                    'customer_id' => $customer->id,
-                    'global_rules_count' => $globalRules->count(),
-                ]);
-
-                foreach ($globalRules as $gr) {
-                    ProductAssociationCustomer::create([
-                        'customer_id' => $customer->id,
-                        'atecedent_product_ids' => $gr->atecedent_product_ids,
-                        'consequent_product_ids' => $gr->consequent_product_ids,
-                        'support' => (float) $gr->support,
-                        'confidence' => (float) $gr->confidence,
-                        'lift' => (float) $gr->lift,
-                        'analysis_date' => now()->toDateString(),
-                    ]);
-                }
-            }
-        }
-
-        \Log::info('Recompute FP-Growth per-customer: saved to DB', ['customer_id' => $customer->id]);
-    }
-
-    public function getRecommendedProductsForCustomer(Customer|int $customer, int $limit = 12): Collection
-    {
+        // Normalisasi input customer
         if (is_int($customer)) {
             $customer = Customer::find($customer);
         }
         if (!$customer) {
+            Log::info('RecommendationService: Customer tidak ditemukan.');
             return collect();
         }
-        // Ambil asosiasi yang sudah tersimpan untuk customer tersebut
-        $assocs = ProductAssociationCustomer::query()
-            ->where('customer_id', $customer->id)
-            ->get(['consequent_product_ids', 'confidence', 'lift']);
 
-        // Skor rekomendasi dari aturan yang ada (tanpa analisis ulang)
+        $limit = max(1, (int) $limit);
+
+        // Ambil semua produk yang PERNAH dibeli customer (distinct)
+        $purchasedProductIds = SalesTransaction::query()->where('customer_id', $customer->id)->join('sales_transaction_items as sti', 'sales_transactions.id', '=', 'sti.sales_transaction_id')->whereNotNull('sti.product_id')->distinct()->pluck('sti.product_id')->map(fn($v) => (int) $v)->values();
+
+        if ($purchasedProductIds->isEmpty()) {
+            Log::info('RecommendationService: Tidak ada histori pembelian untuk customer', ['customer_id' => $customer->id]);
+            return collect();
+        }
+
+        // Ambil aturan: antecedent mengandung MINIMAL salah satu produk yang pernah dibeli.
+        // -> gunakan whereJsonContains dalam 1 grup OR
+        $ids = $purchasedProductIds->all();
+
+        $rules = ProductAssociation::query()
+            ->where(function ($q) use ($ids) {
+                foreach ($ids as $id) {
+                    $q->orWhereJsonContains('atecedent_product_ids', $id);
+                }
+            })
+            ->get(['atecedent_product_ids', 'consequent_product_ids', 'support', 'confidence', 'lift']);
+
+        if ($rules->isEmpty()) {
+            Log::info('RecommendationService: Tidak ada aturan asosiasi yang cocok', ['customer_id' => $customer->id]);
+            return collect();
+        }
+
+        // Hitung skor rekomendasi untuk produk konsekuen YANG BELUM DIBELI
+        $purchasedSet = $purchasedProductIds->flip(); // buat cek cepat
         $score = [];
-        foreach ($assocs as $a) {
-            $conseq = json_decode($a->consequent_product_ids, true) ?: [];
-            foreach ($conseq as $cid) {
+        foreach ($rules as $rule) {
+            $consequentIds = json_decode($rule->consequent_product_ids, true) ?: [];
+            foreach ($consequentIds as $cid) {
                 $cid = (int) $cid;
-                $score[$cid] = ($score[$cid] ?? 0) + (float) $a->confidence + 0.1 * (float) $a->lift;
+                // bobot: confidence dominan, lalu lift & support sebagai penguat
+                $baseScore = (float) $rule->confidence + 0.1 * (float) $rule->lift + 0.05 * (float) $rule->support;
+                if ($purchasedSet->has($cid)) {
+                    // Jika sudah pernah dibeli, tambahkan skor sangat kecil agar tetap diurutkan paling bawah
+                    $score[$cid] = ($score[$cid] ?? 0) + 0.00001 * $baseScore;
+                } else {
+                    $score[$cid] = ($score[$cid] ?? 0) + $baseScore;
+                }
             }
         }
 
         if (empty($score)) {
+            Log::info('RecommendationService: Tidak ada produk yang bisa direkomendasikan', ['customer_id' => $customer->id]);
             return collect();
         }
 
+        // Urutkan & ambil top-N
         arsort($score);
-        $recommendedIds = collect(array_keys($score))->map(fn($v) => (int) $v)->take($limit);
-        $idsCsv = $recommendedIds->implode(',');
+        $recommendedIds = collect(array_keys($score))->map(fn($v) => (int) $v)->take($limit)->values();
 
-        $recommendProducts = Product::query()
-            ->select('id', 'name', 'selling_price', 'discount', 'image')
-            ->whereIn('id', $recommendedIds)
-            ->orderByRaw("FIELD(id, {$idsCsv})")
-            ->get();
-        return $recommendProducts;
+        // OrderByRaw FIELD agar urutan sesuai ranking
+        $idsCsv = $recommendedIds->implode(',');
+        $products = Product::query()->select('id', 'name', 'selling_price', 'discount', 'image')->whereIn('id', $recommendedIds)->when($recommendedIds->isNotEmpty(), fn($q) => $q->orderByRaw("FIELD(id, {$idsCsv})"))->get();
+
+        if ($products->isEmpty()) {
+            Log::info('RecommendationService: Produk hasil rekomendasi tidak ditemukan di DB', [
+                'customer_id' => $customer->id,
+                'ids' => $recommendedIds->all(),
+            ]);
+        }
+
+        return $products;
     }
 }
