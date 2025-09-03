@@ -48,15 +48,17 @@
                     @php
                         $subtotal = 0;
                         $totalDiscount = 0;
+                        $initialPrice = 0;
                         foreach ($products as $product) {
                             $quantity = $cart[$product->id] ?? 0;
                             $originalPrice = $product->selling_price * $quantity;
                             $finalPrice =
-                                $product->discount > 0
-                                    ? $product->selling_price * $product->discount * $quantity
+                                $product->discount > 0.00
+                                    ? ($product->selling_price - ($product->selling_price * $product->discount)) * $quantity
                                     : $originalPrice;
                             $subtotal += $finalPrice;
                             $totalDiscount += $originalPrice - $finalPrice;
+                            $initialPrice += $originalPrice;
                         }
                     @endphp
 
@@ -64,8 +66,8 @@
                         @php
                             $quantity = $cart[$product->id] ?? 0;
                             $finalPrice =
-                                $product->discount > 0
-                                    ? $product->selling_price * $product->discount
+                                $product->discount > 0.0
+                                    ? $product->selling_price - $product->selling_price * $product->discount
                                     : $product->selling_price;
                         @endphp
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -76,7 +78,10 @@
                             </div>
                             <div class="text-end">
                                 <div class="fw-semibold">Rp {{ number_format($finalPrice * $quantity, 0, ',', '.') }}</div>
-                                @if ($product->discount > 0)
+                                @if ($product->discount > 0.0)
+                                    <span class="badge bg-danger">
+                                        -{{ number_format($product->discount * 100, 0) }}%
+                                    </span>
                                     <small class="text-decoration-line-through text-muted">
                                         Rp {{ number_format($product->selling_price * $quantity, 0, ',', '.') }}
                                     </small>
@@ -88,7 +93,7 @@
                     <hr>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Subtotal ({{ array_sum($cart) }} item)</span>
-                        <span>Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
+                        <span>Rp {{ number_format($initialPrice, 0, ',', '.') }}</span>
                     </div>
                     @if ($totalDiscount > 0)
                         <div class="d-flex justify-content-between mb-2 text-success">

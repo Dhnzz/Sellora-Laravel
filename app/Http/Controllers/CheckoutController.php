@@ -33,6 +33,7 @@ class CheckoutController
         $request->validate([
             'note' => 'nullable|string|max:500',
         ]);
+        $note = $request->note ?? null;
 
         $cart = session('cart', []);
 
@@ -49,19 +50,25 @@ class CheckoutController
 
         $productIds = array_keys($cart);
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
-        $total_amount = 0;
-        foreach ($cart as $productIds => $quantity) {
-            $product = $products->get($productIds);
-            if ($product->discount > 0.0) {
-                $price = $product->selling_price * $product->discount;
-            } else {
-                $price = $product->selling_price;
+        $initial_total_amount = 0;
+        $final_total_amount = 0;
+
+        foreach ($cart as $productId => $quantity) {
+            $product = $products->get($productId);
+            if ($product) {
+                // Harga sebelum diskon
+                $originalPrice = $product->selling_price;
+                // Harga setelah diskon
+                $discountedPrice = $product->discount > 0.0
+                    ? $product->selling_price - ($product->selling_price * $product->discount)
+                    : $product->selling_price;
+
+                $initial_total_amount += $originalPrice * $quantity;
+                $final_total_amount += $discountedPrice * $quantity;
             }
-            $productTotal = $price * $quantity;
-            $total_amount += $productTotal;
         }
 
-        DB::transaction(function () use ($customer, $cart, $products, $total_amount) {
+        DB::transaction(function () use ($customer, $cart, $products, $initial_total_amount, $final_total_amount, $note) {
             // Generate invoice ID
             $invoiceDate = now();
             $invoiceDateForId = $invoiceDate->format('dmY');
@@ -71,15 +78,14 @@ class CheckoutController
             // Buat Sales Transaction langsung
             $salesTransaction = SalesTransaction::create([
                 'customer_id' => $customer->id,
-                'admin_id' => 1, // Default admin ID, bisa disesuaikan
-                'sales_agent_id' => 1, // Default sales agent ID, bisa disesuaikan
-                'order_date' => $invoiceDate->format('Y-m-d'),
+                'admin_id' => null, // Default admin ID, bisa disesuaikan
+                'sales_agent_id' => null, // Default sales agent ID, bisa disesuaikan
                 'invoice_id' => $invoiceId,
                 'invoice_date' => $invoiceDate->format('Y-m-d'),
-                'initial_total_amount' => $total_amount,
-                'final_total_amount' => $total_amount,
-                'note' => 'Pesanan dari customer',
-                'transaction_status' => 'process',
+                'initial_total_amount' => $initial_total_amount,
+                'final_total_amount' => $final_total_amount,
+                'note' => $note,
+                'transaction_status' => 'pending',
             ]);
 
             // Buat Sales Transaction Items

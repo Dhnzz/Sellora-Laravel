@@ -56,19 +56,23 @@
                                 <table class="table table-sm">
                                     <tr>
                                         <td>Nomor Invoice</td>
-                                        <td>: <span id="invoice-id"></span></td>
+                                        <td>: <span class="ms-1" id="invoice-id"></span></td>
                                     </tr>
                                     <tr>
                                         <td>Tanggal Order</td>
-                                        <td>: <span id="order-date"></span></td>
+                                        <td>: <span class="ms-1" id="order-date"></span></td>
                                     </tr>
                                     <tr>
                                         <td>Tanggal Invoice</td>
-                                        <td>: <span id="invoice-date"></span></td>
+                                        <td>: <span class="ms-1" id="invoice-date"></span></td>
                                     </tr>
                                     <tr>
                                         <td>Status</td>
-                                        <td>: <span id="order-status"></span></td>
+                                        <td>: <span class="ms-1" id="order-status"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Admin Konfirmasi</td>
+                                        <td>: <span class="ms-1" id="admin-confirm"></span></td>
                                     </tr>
                                 </table>
                             </div>
@@ -77,19 +81,19 @@
                                 <table class="table table-sm">
                                     <tr>
                                         <td>Nama</td>
-                                        <td>: <span id="customer-name"></span></td>
+                                        <td>: <span class="ms-1" id="customer-name"></span></td>
                                     </tr>
                                     <tr>
                                         <td>Telepon</td>
-                                        <td>: <span id="customer-phone"></span></td>
+                                        <td>: <span class="ms-1" id="customer-phone"></span></td>
                                     </tr>
                                     <tr>
                                         <td>Alamat</td>
-                                        <td>: <span id="customer-address"></span></td>
+                                        <td>: <span class="ms-1" id="customer-address"></span></td>
                                     </tr>
                                     <tr>
                                         <td>Sales Agent</td>
-                                        <td>: <span id="sales-agent"></span></td>
+                                        <td>: <span class="ms-1" id="sales-agent"></span></td>
                                     </tr>
                                 </table>
                             </div>
@@ -130,11 +134,11 @@
                                 <table class="table table-sm">
                                     <tr>
                                         <td>Total Awal</td>
-                                        <td>: <span id="initial-total"></span></td>
+                                        <td>: <span class="ms-1" id="initial-total"></span></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Total Akhir</strong></td>
-                                        <td>: <strong><span id="final-total"></span></strong></td>
+                                        <td>: <strong><span class="ms-1" id="final-total"></span></strong></td>
                                     </tr>
                                 </table>
                             </div>
@@ -142,7 +146,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary" id="tutupModalDetail" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
@@ -240,6 +244,8 @@
                 $('#orderDetailContent').hide();
                 $('#orderDetailLoading').show();
                 $('#orderDetailModal').modal('show');
+                // Hapus tombol .confirm-order di dalam .modal-footer sebelum menambahkannya lagi
+                $('.modal-footer .confirm-order').remove();
 
                 // Ambil data detail pesanan dengan AJAX
                 $.ajax({
@@ -255,11 +261,12 @@
                             $('#order-date').text(data.order_date);
                             $('#invoice-date').text(data.invoice_date);
                             $('#order-status').html(data.status_label);
+                            $('#admin-confirm').html(data.admin.name);
 
                             $('#customer-name').text(data.customer.name);
                             $('#customer-phone').text(data.customer.phone);
                             $('#customer-address').text(data.customer.address);
-                            $('#sales-agent').text(data.sales_agent);
+                            $('#sales-agent').text(data.sales_agent.name);
                             $('#initial-total').text(data.initial_total_amount);
                             $('#final-total').text(data.final_total_amount);
 
@@ -279,6 +286,13 @@
                                 $('#cancel-note-container').hide();
                             }
 
+                            if (data.status === 'pending'){
+                                // Tambahkan tombol sebelum tombol tutup di modal-footer
+                                $('#tutupModalDetail').before(
+                                    '<button type="button" class="btn btn-success me-2 confirm-order">Konfirmasi Pesanan</button>'
+                                );
+                            }
+
                             // Isi tabel item pesanan
                             let itemsHtml = '';
                             data.items.forEach((item, index) => {
@@ -289,7 +303,7 @@
                                         <td>${item.product_brand}</td>
                                         <td>${item.quantity} ${item.unit}</td>
                                         <td>${item.price}</td>
-                                        <td>${item.discount * 100}%</td>
+                                        <td>${Math.round(item.discount * 100)}%</td>
                                         <td>${item.subtotal}</td>
                                     </tr>
                                 `;
