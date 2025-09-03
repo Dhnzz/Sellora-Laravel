@@ -20,7 +20,7 @@
                             <label class="form-label small fw-semibold">Status Pesanan</label>
                             <select id="statusFilter" class="form-select form-select-sm">
                                 <option value="">Semua Status</option>
-                                <option value="pending">Menunggu Konfirmasi</option>
+                                <option value="pending">Pending</option>
                                 <option value="cancelled">Ditolak</option>
                                 <option value="process">Diproses</option>
                                 <option value="success">Berhasil</option>
@@ -299,8 +299,7 @@
                             // console.log(response);
                             $('#orderDetailContent').html(response.html);
                             $('#orderDetailModal').modal('show');
-                            if (response.orderStatus != 'success' && response.orderStatus !=
-                                'cancelled') {
+                            if (response.orderStatus === 'pending') {
                                 $('#detail-footer-button').html(
                                     `
                                         <button type="button" class="btn btn-danger cancel-order" data-order-id="${response.orderId}">Batalkan Order</button>
@@ -400,7 +399,7 @@
 
             function getStatusBadge(status) {
                 const statusMap = {
-                    'pending': '<span class="badge bg-warning">Menunggu Konfirmasi</span>',
+                    'pending': '<span class="badge bg-warning">Pending</span>',
                     'process': '<span class="badge bg-info">Diproses</span>',
                     'cancelled': '<span class="badge bg-danger">Dibatalkan</span>',
                     'success': '<span class="badge bg-success">Berhasil</span>',

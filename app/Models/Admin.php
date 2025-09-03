@@ -34,9 +34,4 @@ class Admin extends Model
     {
         return $this->hasMany(MonthlyBookClosing::class, 'admin_id');
     }
-
-    public function delivery_returns(): HasMany
-    {
-        return $this->hasMany(DeliveryReturn::class, 'admin_id');
-    }
 }
