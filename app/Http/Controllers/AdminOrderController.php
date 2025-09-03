@@ -29,7 +29,11 @@ class AdminOrderController
     {
         if ($request->ajax()) {
             // Ambil data transaksi penjualan dengan relasi
-            $query = SalesTransaction::with(['customer', 'sales_agent', 'sales_transaction_items'])->select('sales_transactions.*');
+            $query = SalesTransaction::with(['customer', 'sales_agent', 'sales_transaction_items'])
+                ->select('sales_transactions.*')
+                ->orderBy('created_at', 'desc');
+
+            // Secara default order by created_at desc
 
             return DataTables::of($query)
                 ->addIndexColumn()
@@ -91,7 +95,7 @@ class AdminOrderController
     {
         if ($request->ajax()) {
             // Ambil data transaksi dengan relasi yang dibutuhkan
-            $transaction = SalesTransaction::with(['customer', 'sales_agent', 'sales_transaction_items.product.product_unit', 'sales_transaction_items.product.product_brand'])->findOrFail($order);
+            $transaction = SalesTransaction::with(['customer', 'sales_agent', 'admin', 'sales_transaction_items.product.product_unit', 'sales_transaction_items.product.product_brand'])->findOrFail($order);
 
             // Format data untuk ditampilkan di modal
             $formattedData = [
@@ -102,7 +106,12 @@ class AdminOrderController
                     'phone' => $transaction->customer ? $transaction->customer->phone : 'N/A',
                     'address' => $transaction->customer ? $transaction->customer->address : 'N/A',
                 ],
-                'sales_agent' => $transaction->sales_agent ? $transaction->sales_agent->name : 'N/A',
+                'sales_agent' => [
+                    'name' => $transaction->sales_agent ? $transaction->sales_agent->name : 'N/A'
+                ],
+                'admin' => [
+                    'name' => $transaction->admin ? $transaction->admin->name : 'N/A'
+                ],
                 'order_date' => Carbon::parse($transaction->order_date)->format('d/m/Y'),
                 'invoice_date' => Carbon::parse($transaction->invoice_date)->format('d/m/Y'),
                 'delivery_confirmed_at' => $transaction->delivery_confirmed_at ? Carbon::parse($transaction->delivery_confirmed_at)->format('d/m/Y') : 'N/A',
@@ -135,7 +144,8 @@ class AdminOrderController
         }
 
         // Jika bukan request AJAX, redirect ke halaman index
-        return redirect()->route('admin.orders.index');
+        // return redirect()->route('admin.orders.index');
+        return response()->json(['error' => 'Silahkan load menggunakan ajax']);
     }
 
     /**
