@@ -191,41 +191,14 @@
                         </li>
                     @break
 
-                    @case('warehouse')
-                        <li class="nav-small-cap">
-                            <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-                            <span class="hide-menu">Home</span>
-                        </li>
-                        <li class="sidebar-item">
-                            <a class="sidebar-link " href="{{ url('/dashboard') }}" aria-expanded="false">
-                                <span>
-                                    <i class="ti ti-layout-dashboard"></i>
-                                </span>
-                                <span class="hide-menu">Dashboard</span>
-                            </a>
-                        </li>
-                        <li class="nav-small-cap">
-                            <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-                            <span class="hide-menu">Master Data</span>
-                        </li>
-                        <li class="sidebar-item">
-                            <a class="sidebar-link @if ($active == 'category') active @endif" href="#"
-                                aria-expanded="false">
-                                <span>
-                                    <i class="ti ti-category-2"></i>
-                                </span>
-                                <span class="hide-menu">Category</span>
-                            </a>
-                        </li>
-                    @break
-
                     @case('sales')
                         <li class="nav-small-cap">
                             <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
                             <span class="hide-menu">Home</span>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link " href="{{ url('/dashboard') }}" aria-expanded="false">
+                            <a class="sidebar-link {{ Route::currentRouteName() == $data['role'] . '.dashboard' ? 'active' : '' }}"
+                                href="{{ route($data['role'] . '.dashboard') }}" aria-expanded="false">
                                 <span>
                                     <i class="ti ti-layout-dashboard"></i>
                                 </span>
@@ -234,15 +207,22 @@
                         </li>
                         <li class="nav-small-cap">
                             <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-                            <span class="hide-menu">Master Data</span>
+                            <span class="hide-menu">Pesanan</span>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link @if ($active == 'category') active @endif" href="#"
-                                aria-expanded="false">
+                            <a class="sidebar-link {{ Route::currentRouteName() == 'sales.orders.*' ? 'active' : '' }}" href="{{ route('sales.orders.index') }}" aria-expanded="false">
                                 <span>
-                                    <i class="ti ti-category-2"></i>
+                                    <i class="ti ti-truck-delivery"></i>
                                 </span>
-                                <span class="hide-menu">Category</span>
+                                <span class="hide-menu">Pesanan Dalam Proses</span>
+                            </a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a class="sidebar-link {{ Route::currentRouteName() == 'sales.orders.*' ? 'active' : '' }}" href="{{ route('sales.orders.index') }}" aria-expanded="false">
+                                <span>
+                                    <i class="ti ti-history"></i>
+                                </span>
+                                <span class="hide-menu">Riwayat Pengantaran</span>
                             </a>
                         </li>
                     @break

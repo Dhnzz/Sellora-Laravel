@@ -15,6 +15,49 @@ use Yajra\DataTables\Facades\DataTables;
 
 class SalesAgentController
 {
+    public function dashboard()
+    {
+        // Ambil user sales agent yang sedang login
+        $user = Auth::user();
+        $salesAgent = $user->sales ?? null;
+
+        // Siapkan data untuk dashboard sales agent
+        $totalPending = 0;
+        $totalProcess = 0;
+        $totalSuccess = 0;
+        $totalCancelled = 0;
+        $orderTerbaru = collect();
+
+        if ($salesAgent) {
+            $tx = $salesAgent->sales_transactions();
+            $totalProcess = (clone $tx)->where('transaction_status', 'process')->count();
+            $totalSuccess = (clone $tx)->where('transaction_status', 'success')->count();
+            $orderTerbaru = $salesAgent
+                ->sales_transactions()
+                ->latest()
+                ->take(5)
+                ->get(['invoice_id', 'created_at', 'transaction_status', 'final_total_amount']);
+        }
+
+        $data = [
+            'title' => 'Dashboard Sales Agent',
+            'role' => $user->getRoleNames()->first(),
+            'active' => 'dashboard',
+            'breadcrumbs' => [
+                [
+                    'name' => 'Dashboard',
+                    'link' => route('sales.dashboard'),
+                ],
+            ],
+            'totalProcess' => $totalProcess,
+            'totalSuccess' => $totalSuccess,
+            'orderTerbaru' => $orderTerbaru,
+            // Tambahkan data lain yang diperlukan di dashboard di sini
+        ];
+
+        return view('sales.dashboard', compact('data'));
+    }
+
     public function index(Request $request)
     {
         $data = [
@@ -182,9 +225,9 @@ class SalesAgentController
                     Storage::disk('public')->delete($sales->photo);
                     $photoPath = 'uploads/images/users/user-1.jpg';
                     $sales->update([
-                        'photo' => $photoPath
+                        'photo' => $photoPath,
                     ]);
-                    return response()->json(['success' => 'Berhasil menghapus foto '.$sales->name, 'photo' => $photoPath]);
+                    return response()->json(['success' => 'Berhasil menghapus foto ' . $sales->name, 'photo' => $photoPath]);
                 }
             } catch (\Exception $e) {
                 // Log error untuk debugging

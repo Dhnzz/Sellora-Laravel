@@ -13,8 +13,8 @@ return new class extends Migration {
         Schema::create('sales_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('admin_id')->constrained()->cascadeOnDelete()->nullable();
-            $table->foreignId('sales_agent_id')->constrained()->cascadeOnDelete()->nullable();
+            $table->foreignId('admin_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('sales_agent_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('invoice_id')->unique();
             $table->date('invoice_date');
             $table->decimal('initial_total_amount', 15, 4)->check('initial_total_amount >= 0');

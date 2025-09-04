@@ -204,17 +204,27 @@ class PurchaseAndSalesSeeder extends Seeder
                     $todayCount = SalesTransaction::whereDate('invoice_date', $invoiceDateStr)->count() + 1;
                     $invoiceId = 'INV-' . $invoiceDateForId . '-' . str_pad($todayCount, 4, '0', STR_PAD_LEFT);
 
+                    // Atur admin_id, sales_agent_id, dan delivery_confirmed_at menjadi null jika status pending/cancelled
+                    $adminId = $adminUser->id;
+                    $salesAgentId = $salesAgentUser->id;
+                    $deliveryAt = $deliveryConfirmedAt;
+                    if ($paymentStatus === 'pending' || $paymentStatus === 'cancelled') {
+                        $adminId = null;
+                        $salesAgentId = null;
+                        $deliveryAt = null;
+                    }
+
                     $salesTransaction = SalesTransaction::create([
                         'customer_id' => $customers->random()->id,
-                        'admin_id' => $adminUser->id,
-                        'sales_agent_id' => $salesAgentUser->id,
+                        'admin_id' => $adminId,
+                        'sales_agent_id' => $salesAgentId,
                         'invoice_id' => $invoiceId,
                         'invoice_date' => $invoiceDateStr,
                         'initial_total_amount' => $initialTotalAmount,
                         'final_total_amount' => $finalTotalAmount,
                         'note' => 'Lorem, ipsum dolor.',
                         'transaction_status' => $paymentStatus,
-                        'delivery_confirmed_at' => $deliveryConfirmedAt,
+                        'delivery_confirmed_at' => $deliveryAt,
                     ]);
 
                     $successfulSalesCount++;
