@@ -210,7 +210,7 @@
                             <span class="hide-menu">Pesanan</span>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link {{ Route::currentRouteName() == 'sales.orders.*' ? 'active' : '' }}" href="{{ route('sales.orders.index') }}" aria-expanded="false">
+                            <a class="sidebar-link {{ Route::currentRouteName() == 'sales.orders.' ? 'active' : '' }}" href="{{ route('sales.orders.index') }}" aria-expanded="false">
                                 <span>
                                     <i class="ti ti-truck-delivery"></i>
                                 </span>
@@ -218,7 +218,7 @@
                             </a>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link {{ Route::currentRouteName() == 'sales.orders.*' ? 'active' : '' }}" href="{{ route('sales.orders.index') }}" aria-expanded="false">
+                            <a class="sidebar-link {{ Route::currentRouteName() == 'sales.orders.history.*' ? 'active' : '' }}" href="{{ route('sales.orders.history.index') }}" aria-expanded="false">
                                 <span>
                                     <i class="ti ti-history"></i>
                                 </span>

@@ -27,6 +27,22 @@ class SalesOrderController
         return view('sales.order.index', compact('data'));
     }
 
+    public function history()
+    {
+        $data = [
+            'title' => 'Riwayat Pesanan',
+            'role' => Auth::user()->getRoleNames()->first(),
+            'breadcrumbs' => [
+                [
+                    'name' => 'Riwayat Pesanan',
+                    'link' => route('sales.orders.history.index'),
+                ],
+            ],
+        ];
+
+        return view('sales.order.history', compact('data'));
+    }
+
     public function getAll(Request $request)
     {
         if ($request->ajax()) {
@@ -53,6 +69,101 @@ class SalesOrderController
 
                     if ($status === 'process') {
                         $badge = '<span class="badge bg-info" style="width: 100px">Diproses</span>';
+                    }
+
+                    return $badge;
+                })
+                ->addColumn('actions', function ($row) {
+                    $btn = '<div class="btn-group btn-group-sm">';
+                    $btn .= '<button type="button" class="btn btn-outline-primary view-order" data-order-id="' . $row->id . '"><i class="ti ti-eye"></i></button>';
+                    $btn .= '</div>';
+                    return $btn;
+                })
+                // Tambahkan fungsi sort dan search
+                ->filter(function ($query) use ($request) {
+                    // Search
+                    if ($search = $request->input('search.value')) {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('invoice_id', 'like', "%{$search}%")
+                                ->orWhereHas('customer', function ($q2) use ($search) {
+                                    $q2->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%");
+                                })
+                                ->orWhere('final_total_amount', 'like', "%{$search}%");
+                        });
+                    }
+                })
+                ->order(function ($query) use ($request) {
+                    // Jika tidak ada parameter order dari DataTables, urutkan default by created_at desc
+                    if (!$request->has('order') || empty($request->input('order'))) {
+                        $query->orderBy('created_at', 'desc');
+                        return;
+                    }
+
+                    // Sortir berdasarkan kolom yang diminta DataTables
+                    $order = $request->input('order')[0];
+                    $columnIndex = $order['column'];
+                    $columnName = $request->input('columns')[$columnIndex]['data'];
+                    $sortDirection = $order['dir'];
+
+                    // Kolom yang bisa di-sort
+                    $sortableColumns = ['id', 'invoice_id', 'customer_name', 'invoice_date', 'final_total_amount'];
+
+                    if (in_array($columnName, $sortableColumns)) {
+                        if ($columnName === 'customer_name') {
+                            // Pastikan join ke tabel customers jika belum
+                            if (
+                                !collect($query->getQuery()->joins)
+                                    ->pluck('table')
+                                    ->contains('customers')
+                            ) {
+                                $query->leftJoin('customers', 'sales_transactions.customer_id', '=', 'customers.id');
+                            }
+                            $query->orderBy('customers.name', $sortDirection)->select('sales_transactions.*');
+                        } else {
+                            $query->orderBy($columnName, $sortDirection);
+                        }
+                    } elseif ($columnName === 'DT_RowIndex') {
+                        // Abaikan sorting untuk kolom nomor urut jika tidak diperlukan
+                        // $query->orderBy('created_at', 'desc');
+                    }
+                })
+                ->editColumn('invoice_date', function ($row) {
+                    return Carbon::parse($row->invoice_date)->format('d/m/Y');
+                })
+                ->editColumn('final_total_amount', function ($row) {
+                    return 'Rp ' . number_format($row->final_total_amount, 0, ',', '.');
+                })
+                ->rawColumns(['status_label', 'actions'])
+                ->make(true);
+        }
+    }
+
+    public function getHistory(Request $request)
+    {
+        if ($request->ajax()) {
+            $sales = Auth::user();
+            // Ambil data transaksi penjualan dengan relasi
+            $query = SalesTransaction::with(['customer', 'sales_agent', 'sales_transaction_items'])
+                ->where(['transaction_status' => 'success', 'sales_agent_id' => $sales->sales->id])
+                ->select('sales_transactions.*')
+                ->orderBy('created_at', 'desc');
+
+            // Secara default order by created_at desc
+
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('customer_name', function ($row) {
+                    return $row->customer ? $row->customer->name : 'N/A';
+                })
+                ->addColumn('customer_phone', function ($row) {
+                    return $row->customer ? $row->customer->phone : 'N/A';
+                })
+                ->addColumn('status_label', function ($row) {
+                    $status = $row->transaction_status;
+                    $badge = '';
+
+                    if ($status === 'success') {
+                        $badge = '<span class="badge bg-info" style="width: 100px">Sukses</span>';
                     }
 
                     return $badge;
