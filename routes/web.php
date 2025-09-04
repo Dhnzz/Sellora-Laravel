@@ -388,6 +388,8 @@ Route::middleware(['auth'])->group(function () {
                 ->group(function () {
                     Route::get('/', [SalesOrderController::class, 'index'])->name('index');
                     Route::get('/data', [SalesOrderController::class, 'getAll'])->name('data');
+                    Route::get('/history', [SalesOrderController::class, 'history'])->name('history.index');
+                    Route::get('/history-data', [SalesOrderController::class, 'getHistory'])->name('history.data');
                     Route::get('/{order}', [SalesOrderController::class, 'show'])->name('show');
                     Route::post('/{order}/confirm', [SalesOrderController::class, 'confirm'])->name('confirm');
                 });
