@@ -1,7 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Kelola Pesanan – Admin')
-
 @section('content')
     <div class="card bg-light-info shadow-none position-relative overflow-hidden">
         <div class="card-body px-4 py-3">
@@ -22,13 +20,12 @@
         </div>
     </div>
 
-
     <div class="container-fluid">
         <div class="row">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4 class="card-title">Daftar Pesanan Customer</h4>
+                        <h4 class="card-title">Daftar Pesanan Yang Belum Diantar</h4>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -111,10 +108,6 @@
                                         <td>Telepon</td>
                                         <td>: <span class="ms-1" id="customer-phone"></span></td>
                                     </tr>
-                                    <tr>
-                                        <td>Alamat</td>
-                                        <td>: <span class="ms-1" id="customer-address"></span></td>
-                                    </tr>
                                 </table>
                             </div>
                         </div>
@@ -163,6 +156,12 @@
                                 </table>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <label for="">Alamat Pengantaran</label>
+                                <textarea name="" class="form-control" disabled id="customer-address"></textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -178,17 +177,15 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="confirmAssignModalLabel">Konfirmasi Pesanan</h5>
+                    <h5 class="modal-title" id="confirmAssignModalLabel">Pesanan Telah Diantarkan</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="confirm-order-id">
                     <div class="mb-3">
-                        <label for="select-sales-agent" class="form-label">Tugaskan Sales Agent</label>
-                        <select id="select-sales-agent" class="form-select">
-                            <option value="auto">Pilih otomatis (order aktif paling sedikit)</option>
-                        </select>
-                        <div class="form-text">Pilih manual atau gunakan opsi otomatis.</div>
+                        <label for="select-sales-agent" class="form-label">Konfirmasi Pesanan Telah Selesai</label>
+                        <input type="text" class="form-control" id="delivered-validation"
+                            placeholder='Ketik "Selesai" untuk menyelesaikan pesanan ini'>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -199,15 +196,13 @@
         </div>
     </div>
 @endsection
-
 @push('scripts')
     <script>
         $(function() {
-            // Inisialisasi DataTable dengan AJAX
             $('#orders-table').DataTable({
                 processing: true,
                 serverSide: true,
-                ajax: "{{ route('admin.orders.data') }}",
+                ajax: "{{ route('sales.orders.data') }}",
                 columns: [{
                         data: 'DT_RowIndex',
                         name: 'DT_RowIndex',
@@ -251,65 +246,6 @@
                 ],
             });
 
-            // Event handler: buka modal assign sales agent saat klik konfirmasi
-            $(document).on('click', '.confirm-order', function() {
-                const orderId = $(this).data('order-id');
-                $('#confirm-order-id').val(orderId);
-                const $select = $('#select-sales-agent');
-                $select.empty().append(
-                    '<option value="auto">Pilih otomatis (order aktif paling sedikit)</option>'
-                );
-
-                $.get('/admin/orders/sales-agents', function(resp) {
-                    if (resp.success) {
-                        resp.data.forEach(function(agent) {
-                            $select.append(
-                                `<option value="${agent.id}">${agent.name} (aktif: ${agent.active_orders})</option>`
-                            );
-                        });
-                    }
-                    $('#confirmAssignModal').modal('show');
-                }).fail(function() {
-                    toastr.error('Gagal memuat daftar sales agent');
-                    $('#confirmAssignModal').modal('show');
-                });
-            });
-
-            // Submit konfirmasi
-            $('#btn-confirm-assign').on('click', function() {
-                const orderId = $('#confirm-order-id').val();
-                const salesAgentId = $('#select-sales-agent').val();
-                const btn = $(this);
-                btn.prop('disabled', true);
-
-                $.ajax({
-                        url: `/admin/orders/${orderId}/confirm`,
-                        method: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            sales_agent_id: salesAgentId
-                        }
-                    })
-                    .done(function(resp) {
-                        if (resp.success) {
-                            toastr.success(resp.message);
-                            $('#confirmAssignModal').modal('hide');
-                            $('#orderDetailModal').modal('hide');
-                            $('#orders-table').DataTable().ajax.reload();
-                        } else {
-                            toastr.error(resp.message || 'Gagal konfirmasi pesanan');
-                        }
-                    })
-                    .fail(function(xhr) {
-                        const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON
-                            .message : 'Terjadi kesalahan';
-                        toastr.error(msg);
-                    })
-                    .always(function() {
-                        btn.prop('disabled', false);
-                    });
-            });
-
             // Event handler untuk tombol lihat detail pesanan
             $(document).on('click', '.view-order', function() {
                 const orderId = $(this).data('order-id');
@@ -322,7 +258,7 @@
 
                 // Ambil data detail pesanan dengan AJAX
                 $.ajax({
-                    url: `/admin/orders/${orderId}`,
+                    url: `/sales/orders/${orderId}`,
                     method: 'GET',
                     dataType: 'json',
                     success: function(response) {
@@ -359,12 +295,9 @@
                                 $('#cancel-note-container').hide();
                             }
 
-                            if (data.status === 'pending') {
-                                $('.btn-tutup-detail-modal').before(
-                                    `<button type="button" class="btn btn-success btn-konfirmasi-order confirm-order" data-order-id="${orderId}">Konfirmasi Order</button>`
-
-                                );
-                            }
+                            $('.btn-tutup-detail-modal').before(
+                                `<button type="button" class="btn btn-success btn-konfirmasi-order confirm-order" data-order-id="${orderId}">Pesanan Selesai</button>`
+                            );
 
                             // Isi tabel item pesanan
                             let itemsHtml = '';
@@ -398,7 +331,53 @@
                 });
             });
 
-            // Utility
+            // Event handler: buka modal assign sales agent saat klik konfirmasi
+            $(document).on('click', '.confirm-order', function() {
+                const orderId = $(this).data('order-id');
+                $('#confirm-order-id').val(orderId);
+                $('#confirmAssignModal').modal('show');
+            });
+
+            // Submit konfirmasi
+            $('#btn-confirm-assign').on('click', function() {
+                const deliveredValidation = $('#delivered-validation');
+
+                if (deliveredValidation.val() !== 'Selesai') {
+                    toastr.error('Konfirmasi gagal')
+                    deliveredValidation.val('')
+                } else {
+                    const orderId = $('#confirm-order-id').val();
+                    const btn = $(this);
+                    btn.prop('disabled', true);
+
+                    $.ajax({
+                            url: `/sales/orders/${orderId}/confirm`,
+                            method: 'POST',
+                            data: {
+                                _token: '{{ csrf_token() }}',
+                            }
+                        })
+                        .done(function(resp) {
+                            if (resp.success) {
+                                toastr.success(resp.message);
+                                deliveredValidation.val('')
+                                $('#confirmAssignModal').modal('hide');
+                                $('#orderDetailModal').modal('hide');
+                                $('#orders-table').DataTable().ajax.reload();
+                            } else {
+                                toastr.error(resp.message || 'Gagal konfirmasi pesanan');
+                            }
+                        })
+                        .fail(function(xhr) {
+                            const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON
+                                .message : 'Terjadi kesalahan';
+                            toastr.error(msg);
+                        })
+                        .always(function() {
+                            btn.prop('disabled', false);
+                        });
+                }
+            });
         });
     </script>
 @endpush

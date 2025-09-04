@@ -3,37 +3,37 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use App\Models\SalesTransaction;
-use App\Models\SalesAgent;
-use App\Models\Admin as AdminModel;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use App\Models\SalesTransaction;
 use Illuminate\Support\Facades\Auth;
+use Log;
 use Yajra\DataTables\Facades\DataTables;
 
-class AdminOrderController
+class SalesOrderController
 {
     public function index()
     {
         $data = [
-            'title' => 'Manajemen Pemesanan',
+            'title' => 'Pesanan',
             'role' => Auth::user()->getRoleNames()->first(),
             'breadcrumbs' => [
                 [
-                    'name' => 'Daftar Pesanan',
-                    'link' => '#',
+                    'name' => 'Pesanan Belum Diantar',
+                    'link' => route('sales.orders.index'),
                 ],
             ],
         ];
 
-        return view('admin.orders.index', compact('data'));
+        return view('sales.order.index', compact('data'));
     }
 
     public function getAll(Request $request)
     {
         if ($request->ajax()) {
+            $sales = Auth::user();
             // Ambil data transaksi penjualan dengan relasi
             $query = SalesTransaction::with(['customer', 'sales_agent', 'sales_transaction_items'])
+                ->where(['transaction_status' => 'process', 'sales_agent_id' => $sales->sales->id])
                 ->select('sales_transactions.*')
                 ->orderBy('created_at', 'desc');
 
@@ -51,14 +51,8 @@ class AdminOrderController
                     $status = $row->transaction_status;
                     $badge = '';
 
-                    if ($status === 'pending') {
-                        $badge = '<span class="badge bg-warning" style="width: 100px">Pending</span>';
-                    } elseif ($status === 'process') {
+                    if ($status === 'process') {
                         $badge = '<span class="badge bg-info" style="width: 100px">Diproses</span>';
-                    } elseif ($status === 'success') {
-                        $badge = '<span class="badge bg-success" style="width: 100px">Selesai</span>';
-                    } elseif ($status === 'cancelled') {
-                        $badge = '<span class="badge bg-danger" style="width: 100px">Dibatalkan</span>';
                     }
 
                     return $badge;
@@ -66,11 +60,6 @@ class AdminOrderController
                 ->addColumn('actions', function ($row) {
                     $btn = '<div class="btn-group btn-group-sm">';
                     $btn .= '<button type="button" class="btn btn-outline-primary view-order" data-order-id="' . $row->id . '"><i class="ti ti-eye"></i></button>';
-
-                    if ($row->transaction_status === 'pending') {
-                        $btn .= '<button class="btn btn-outline-success confirm-order" data-order-id="' . $row->id . '"><i class="ti ti-check"></i></button>';
-                    }
-
                     $btn .= '</div>';
                     return $btn;
                 })
@@ -82,9 +71,6 @@ class AdminOrderController
                             $q->where('invoice_id', 'like', "%{$search}%")
                                 ->orWhereHas('customer', function ($q2) use ($search) {
                                     $q2->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%");
-                                })
-                                ->orWhereHas('sales_agent', function ($q3) use ($search) {
-                                    $q3->where('name', 'like', "%{$search}%");
                                 })
                                 ->orWhere('final_total_amount', 'like', "%{$search}%");
                         });
@@ -104,7 +90,7 @@ class AdminOrderController
                     $sortDirection = $order['dir'];
 
                     // Kolom yang bisa di-sort
-                    $sortableColumns = ['id', 'invoice_id', 'customer_name', 'invoice_date', 'final_total_amount', 'status_label'];
+                    $sortableColumns = ['id', 'invoice_id', 'customer_name', 'invoice_date', 'final_total_amount'];
 
                     if (in_array($columnName, $sortableColumns)) {
                         if ($columnName === 'customer_name') {
@@ -117,8 +103,6 @@ class AdminOrderController
                                 $query->leftJoin('customers', 'sales_transactions.customer_id', '=', 'customers.id');
                             }
                             $query->orderBy('customers.name', $sortDirection)->select('sales_transactions.*');
-                        } elseif ($columnName === 'status_label') {
-                            $query->orderBy('transaction_status', $sortDirection)->select('sales_transactions.*');
                         } else {
                             $query->orderBy($columnName, $sortDirection);
                         }
@@ -130,9 +114,6 @@ class AdminOrderController
                 ->editColumn('invoice_date', function ($row) {
                     return Carbon::parse($row->invoice_date)->format('d/m/Y');
                 })
-                ->editColumn('delivery_confirmed_at', function ($row) {
-                    return $row->delivery_confirmed_at ? Carbon::parse($row->delivery_confirmed_at)->format('d/m/Y') : 'N/A';
-                })
                 ->editColumn('final_total_amount', function ($row) {
                     return 'Rp ' . number_format($row->final_total_amount, 0, ',', '.');
                 })
@@ -141,88 +122,14 @@ class AdminOrderController
         }
     }
 
-    /**
-     * Daftar Sales Agent beserta jumlah order aktif (pending/process)
-     */
-    public function salesAgents(Request $request)
-    {
-        $agents = SalesAgent::query()
-            ->leftJoin('sales_transactions as st', function ($join) {
-                $join->on('st.sales_agent_id', '=', 'sales_agents.id')->whereIn('st.transaction_status', ['pending', 'process']);
-            })
-            ->groupBy('sales_agents.id', 'sales_agents.name')
-            ->select('sales_agents.id', 'sales_agents.name', DB::raw('COUNT(st.id) as active_orders'))
-            ->orderBy('sales_agents.name')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $agents,
-        ]);
-    }
-
-    /**
-     * Konfirmasi pesanan dan tetapkan Sales Agent
-     */
-    public function confirm(Request $request, $orderId)
-    {
-        $request->validate([
-            'sales_agent_id' => 'required', // 'auto' atau numeric id
-        ]);
-
-        $transaction = SalesTransaction::findOrFail($orderId);
-
-        // Tentukan admin_id dari user yang login
-        $adminId = AdminModel::where('user_id', Auth::id())->value('id');
-
-        // Tentukan sales agent: manual atau auto-assign
-        $salesAgentIdInput = $request->input('sales_agent_id');
-        if ($salesAgentIdInput === 'auto') {
-            $chosen = SalesAgent::query()
-                ->leftJoin('sales_transactions as st', function ($join) {
-                    $join->on('st.sales_agent_id', '=', 'sales_agents.id')->whereIn('st.transaction_status', ['pending', 'process']);
-                })
-                ->groupBy('sales_agents.id')
-                ->select('sales_agents.id', DB::raw('COUNT(st.id) as active_orders'))
-                ->orderBy('active_orders')
-                ->orderBy('sales_agents.id')
-                ->first();
-
-            if (!$chosen) {
-                return response()->json(['success' => false, 'message' => 'Tidak ada Sales Agent yang tersedia'], 422);
-            }
-            $salesAgentId = $chosen->id;
-        } else {
-            $salesAgentId = (int) $salesAgentIdInput;
-            if (!SalesAgent::where('id', $salesAgentId)->exists()) {
-                return response()->json(['success' => false, 'message' => 'Sales Agent tidak ditemukan'], 422);
-            }
-        }
-
-        $transaction->update([
-            'transaction_status' => 'process',
-            'sales_agent_id' => $salesAgentId,
-            'admin_id' => $adminId,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Pesanan berhasil dikonfirmasi dan Sales Agent ditetapkan.',
-        ]);
-    }
-
-    /**
-     * Menampilkan detail pesanan dalam format JSON untuk modal
-     *
-     * @param Request $request
-     * @param int $order ID pesanan
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function show(Request $request, $order)
     {
         if ($request->ajax()) {
+            $user = Auth::user();
             // Ambil data transaksi dengan relasi yang dibutuhkan
-            $transaction = SalesTransaction::with(['customer', 'sales_agent', 'admin', 'sales_transaction_items.product.product_unit', 'sales_transaction_items.product.product_brand'])->findOrFail($order);
+            $transaction = SalesTransaction::with(['customer', 'sales_agent', 'admin', 'sales_transaction_items.product.product_unit', 'sales_transaction_items.product.product_brand'])
+                ->where('sales_agent_id', $user->sales->id)
+                ->findOrFail($order);
 
             // Format data untuk ditampilkan di modal
             $formattedData = [
@@ -234,10 +141,10 @@ class AdminOrderController
                     'address' => $transaction->customer ? $transaction->customer->address : 'N/A',
                 ],
                 'sales_agent' => [
-                    'name' => $transaction->sales_agent ? $transaction->sales_agent->name : 'N/A'
+                    'name' => $transaction->sales_agent ? $transaction->sales_agent->name : 'N/A',
                 ],
                 'admin' => [
-                    'name' => $transaction->admin ? $transaction->admin->name : 'N/A'
+                    'name' => $transaction->admin ? $transaction->admin->name : 'N/A',
                 ],
                 'order_date' => Carbon::parse($transaction->order_date)->format('d/m/Y'),
                 'invoice_date' => Carbon::parse($transaction->invoice_date)->format('d/m/Y'),
@@ -273,6 +180,26 @@ class AdminOrderController
         // Jika bukan request AJAX, redirect ke halaman index
         // return redirect()->route('admin.orders.index');
         return response()->json(['error' => 'Silahkan akses menggunakan ajax']);
+    }
+
+    /**
+     * Konfirmasi pesanan telah diantar
+     */
+    public function confirm(Request $request, $orderId)
+    {
+        $transaction = SalesTransaction::findOrFail($orderId);
+
+        $deliveryDate = now();
+
+        $transaction->update([
+            'transaction_status' => 'success',
+            'delivery_confirmed_at' => $deliveryDate
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pesanan berhasil diantarkan.',
+        ]);
     }
 
     /**

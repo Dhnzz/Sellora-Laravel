@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SalesOrderController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -259,7 +260,6 @@ Route::middleware(['auth'])->group(function () {
                         ->group(function () {
                             Route::get('/', [ProductController::class, 'index'])->name('index');
                             Route::get('/data', [ProductController::class, 'getAll'])->name('data');
-                            Route::get('/test', [ProductController::class, 'test'])->name('test');
                             Route::get('/create', [ProductController::class, 'create'])->name('create');
                             Route::post('/store', [ProductController::class, 'store'])->name('store');
                             Route::put('/deleteImage/{product}', [ProductController::class, 'deleteImage'])->name('deleteImage');
@@ -373,6 +373,27 @@ Route::middleware(['auth'])->group(function () {
                 });
         });
 
+    // SALES
+    Route::middleware(['role:sales'])
+        ->prefix('sales')
+        ->name('sales.')
+        ->group(function () {
+            Route::get('/profile/{sales}', [SalesAgentController::class, 'edit'])->name('profile');
+            Route::put('/profile/update/{sales}', [SalesAgentController::class, 'update'])->name('profile.update');
+            Route::get('/dashboard', [SalesAgentController::class, 'dashboard'])->name('dashboard');
+            // Route::get('/orders', [SalesAgentController::class, 'orders'])->name('orders');
+
+            Route::prefix('orders')
+                ->name('orders.')
+                ->group(function () {
+                    Route::get('/', [SalesOrderController::class, 'index'])->name('index');
+                    Route::get('/data', [SalesOrderController::class, 'getAll'])->name('data');
+                    Route::get('/{order}', [SalesOrderController::class, 'show'])->name('show');
+                    Route::post('/{order}/confirm', [SalesOrderController::class, 'confirm'])->name('confirm');
+                });
+        });
+
+    // CUSTOMER
     Route::middleware(['role:customer'])
         ->prefix('customer')
         ->name('customer.')

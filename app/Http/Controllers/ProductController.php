@@ -35,14 +35,6 @@ class ProductController
         return view('owner.master_data.product.page.index', compact('data'));
     }
 
-    public function test()
-    {
-        $data = Product::latest()->leftJoin('stocks', 'products.id', '=', 'stocks.product_id')->rightJoin('product_units', 'product_units.id', '=', 'products.minimum_selling_unit_id')->rightJoin('product_brands', 'product_brands.id', '=', 'products.product_brand_id')->select('products.name', 'products.created_at', 'discount', 'selling_price')->orderBy('discount', 'desc')->get();
-        $discount = '';
-
-        dd($data);
-    }
-
     public function getAll(Request $request)
     {
         if ($request->ajax()) {

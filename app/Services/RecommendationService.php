@@ -35,16 +35,16 @@ class RecommendationService
 
         // Ambil aturan: antecedent mengandung MINIMAL salah satu produk yang pernah dibeli.
         // -> gunakan whereJsonContains dalam 1 grup OR
-        $ids = $purchasedProductIds->all();
+        $ids = $purchasedProductIds;
 
         $rules = ProductAssociation::query()
-            ->where(function ($q) use ($ids) {
-                foreach ($ids as $id) {
-                    $q->orWhereJsonContains('atecedent_product_ids', $id);
-                }
-            })
-            ->get(['atecedent_product_ids', 'consequent_product_ids', 'support', 'confidence', 'lift']);
-
+        ->where(function ($q) use ($ids) {
+            foreach ($ids as $id) {
+                $q->orWhereJsonContains('atecedent_product_ids', $id);
+            }
+        })
+        ->get(['atecedent_product_ids', 'consequent_product_ids', 'support', 'confidence', 'lift']);
+        
         if ($rules->isEmpty()) {
             Log::info('RecommendationService: Tidak ada aturan asosiasi yang cocok', ['customer_id' => $customer->id]);
             return collect();

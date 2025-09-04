@@ -191,10 +191,10 @@ class OrderController
                     'phone' => $st->customer->phone ?? null,
                 ],
                 'sales_agent' => (object) [
-                    'name' => $st->sales_agent->name
+                    'name' => $st->sales_agent->name ?? null
                 ],
                 'admin' => (object) [
-                    'name' => $st->admin->name
+                    'name' => $st->admin->name ?? null
                 ],
                 'orderItems' => $st->sales_transaction_items->map(function ($item) {
                     $netPrice = $item->product->discount > 0.0 ? $item->product->selling_price - $item->product->selling_price * $item->product->discount : $item->product->selling_price;
@@ -222,7 +222,7 @@ class OrderController
                 'success' => true,
                 'html' => $html,
                 'orderId' => $orderData->id,
-                'orderStatus' => $orderData->status
+                'orderStatus' => $orderData->status,
             ]);
         } catch (Exception $e) {
             return response()->json(

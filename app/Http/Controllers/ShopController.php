@@ -24,6 +24,7 @@ class ShopController
         if ($user && $user->getRoleNames()->first() == 'customer') {
             $recommendedProducts = app(RecommendationService::class)->getRecommendedProductsForCustomer($user->customer, 10);
         }
+
         return view('customer.home', compact('bundles', 'discountProducts', 'recommendedProducts'));
     }
 
@@ -32,9 +33,8 @@ class ShopController
         $user = Auth::user();
         // Gunakan service rekomendasi yang sama seperti di home
         $recommendedIds = collect();
-        if ($user && isset($user->customer)) {
-            $recoProducts = app(RecommendationService::class)->getRecommendedProductsForCustomer($user->customer, 200);
-            $recommendedIds = $recoProducts->pluck('id');
+        if ($user && $user->getRoleNames()->first() == 'customer') {
+            $recommendedProducts = app(RecommendationService::class)->getRecommendedProductsForCustomer($user->customer, 10);
         }
 
         // 3) query produk: recommended dulu (urutan custom), lanjut sisanya (terbaru)
