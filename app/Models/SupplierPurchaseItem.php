@@ -12,8 +12,8 @@ class SupplierPurchaseItem extends Model
         'supplier_purchase_id',
         'product_id',
         'quantity',
-        'product_unit_id',
-        'product_unit_price',
+        'price',
+        'total',
     ];
 
     public function supplier_purchase(): BelongsTo
@@ -24,10 +24,5 @@ class SupplierPurchaseItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id');
-    }
-
-    public function product_unit(): BelongsTo
-    {
-        return $this->belongsTo(ProductUnit::class, 'product_unit_id');
     }
 }

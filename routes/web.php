@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\SalesOrderController;
+use App\Http\Controllers\SupplierPurchaseController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -80,6 +81,21 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/dashboard/sales-chart', [OwnerController::class, 'salesChartData'])->name('dashboard.sales_chart');
             Route::get('/dashboard/top-sales', [OwnerController::class, 'topSalesData'])->name('dashboard.top_sales');
             Route::get('/dashboard/latest', [OwnerController::class, 'latest'])->name('dashboard.latest');
+
+            // Supplier Purchase
+            Route::prefix('supplier_purchase')
+                ->name('supplier_purchase.')
+                ->group(function () {
+                    Route::get('/', [SupplierPurchaseController::class, 'index'])->name('index');
+                    Route::get('/create', [SupplierPurchaseController::class, 'create'])->name('create');
+                    Route::post('/store', [SupplierPurchaseController::class, 'store'])->name('store');
+                    Route::get('/{supplierPurchase}', [SupplierPurchaseController::class, 'show'])->name('show');
+                    Route::get('/{supplierPurchase}/edit', [SupplierPurchaseController::class, 'edit'])->name('edit');
+                    Route::put('/{supplierPurchase}', [SupplierPurchaseController::class, 'update'])->name('update');
+                    Route::delete('/{supplierPurchase}', [SupplierPurchaseController::class, 'destroy'])->name('destroy');
+                    Route::get('/data/getAll', [SupplierPurchaseController::class, 'getAll'])->name('getAll');
+                    Route::get('/data/products', [SupplierPurchaseController::class, 'getProducts'])->name('getProducts');
+                });
 
             // Monthly Closing Book
             Route::prefix('closing')
