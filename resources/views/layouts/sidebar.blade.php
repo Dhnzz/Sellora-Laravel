@@ -1,10 +1,10 @@
 <aside class="left-sidebar">
     <!-- Sidebar scroll-->
     <div>
-        <div class="brand-logo d-flex align-items-center justify-content-between">
+        <div class="brand-logo d-flex align-items-center justify-content-center">
             <a href="{{ route('owner.dashboard') }}" class="text-nowrap">
                 <div class="d-flex align-items-center">
-                    <img src="{{ asset('assets/front/img/favicon.png') }}" width="50">
+                    <img src="{{ asset('assets/front/img/favicon.png') }}" width="80">
                     <h4 class="mb-0 px-2 fw-bolder">{{ strtoupper($data['role'] ?? '') }} PANEL</h4>
                 </div>
             </a>
