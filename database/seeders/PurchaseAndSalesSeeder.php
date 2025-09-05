@@ -264,7 +264,6 @@ class PurchaseAndSalesSeeder extends Seeder
                 $supplier = $suppliers->random();
 
                 $supplierPurchase = SupplierPurchase::create([
-                    'admin_id' => $adminUser->id,
                     'supplier_id' => $supplier->id,
                     'purchase_date' => Carbon::instance($purchaseDate)->format('Y-m-d'),
                     'invoice_number' => 'INV-SUP-' . Carbon::instance($purchaseDate)->format('Ymd') . '-' . $supplier->id,
@@ -291,8 +290,8 @@ class PurchaseAndSalesSeeder extends Seeder
                     $supplierPurchase->supplier_purchase_item()->create([
                         'product_id' => $product->id,
                         'quantity' => $quantity,
-                        'product_unit_id' => $selectedUnit->id,
-                        'product_unit_price' => round($unitPurchasePrice, 2),
+                        'price' => round($unitPurchasePrice, 2),
+                        'total' => $unitPurchasePrice * $quantity,
                     ]);
                     $totalAmount += $quantity * $unitPurchasePrice;
                 }

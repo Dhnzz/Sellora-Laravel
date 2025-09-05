@@ -12,7 +12,6 @@ return new class extends Migration {
     {
         Schema::create('supplier_purchases', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('admin_id')->constrained()->cascadeOnDelete();
             $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
             $table->date('purchase_date');
             $table->string('invoice_number');

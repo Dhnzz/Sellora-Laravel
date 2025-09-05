@@ -41,7 +41,7 @@ class OwnerController
         $type = $request->input('type');
         $filter = $request->input('filter', 'all');
 
-        $queryOmset = SalesTransaction::query();
+        $queryOmset = SalesTransaction::query()->where('transaction_status', 'success');
         $queryExpense = SupplierPurchase::query();
 
         if ($type === 'omset') {

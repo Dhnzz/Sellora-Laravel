@@ -11,18 +11,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SupplierPurchase extends Model
 {
     protected $fillable  = [
-        'admin_id',
         'supplier_id',
         'purchase_date',
         'invoice_number',
         'total_amount',
         'notes',
     ];
-
-    public function admin(): BelongsTo
-    {
-        return $this->belongsTo(Admin::class, 'admin_id');
-    }
 
     public function supplier(): BelongsTo
     {
