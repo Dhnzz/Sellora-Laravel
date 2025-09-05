@@ -260,7 +260,8 @@ class SupplierPurchaseController
                     'supplier_purchase_id' => $supplierPurchase->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
-                    'product_unit_price' => $item['price'],
+                    'price' => $item['price'],
+                    'total' => $item['price'] * $item['quantity'],
                 ]);
 
                 // Update stok produk

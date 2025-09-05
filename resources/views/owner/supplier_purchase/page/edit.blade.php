@@ -1,9 +1,5 @@
 @extends('layouts.app')
 
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/supplier-purchase.css') }}">
-@endpush
-
 @section('content')
     <div class="card bg-light-info shadow-none position-relative overflow-hidden">
         <div class="card-body px-4 py-3">
@@ -77,12 +73,12 @@
                     <label class="control-label mb-1">Produk yang Dibeli <span class="text-danger">*</span></label>
                     <div id="product-items">
                         @foreach ($supplierPurchase->supplier_purchase_item as $index => $item)
-                            <div class="product-item border rounded p-3 mb-3">
+                            <div class="product-item border rounded p-2 mb-3">
                                 <div class="row">
                                     <div class="col-md-4">
                                         <div class="mb-2">
                                             <label class="form-label">Produk</label>
-                                            <select class="form-select product-select"
+                                            <select class="form-select form-select-sm product-select"
                                                 name="items[{{ $index }}][product_id]" required>
                                                 <option value="">Pilih Produk</option>
                                                 @foreach ($products as $product)
@@ -100,7 +96,7 @@
                                     <div class="col-md-2">
                                         <div class="mb-2">
                                             <label class="form-label">Jumlah</label>
-                                            <div class="input-group">
+                                            <div class="input-group input-group-sm">
                                                 <button type="button" class="btn btn-outline-secondary btn-decrease"
                                                     data-index="{{ $index }}">
                                                     <i class="ti ti-minus"></i>
@@ -118,27 +114,30 @@
                                     <div class="col-md-3">
                                         <div class="mb-2">
                                             <label class="form-label">Harga Beli per Unit</label>
-                                            <div class="input-group">
+                                            <div class="input-group input-group-sm">
                                                 <span class="input-group-text">Rp</span>
-                                                <input type="number" class="form-control price-input"
-                                                    name="items[{{ $index }}][price]"
-                                                    value="{{ $item->product_unit_price }}" placeholder="0" min="0"
-                                                    step="0.01" required>
+                                                <input type="text" class="form-control format-ribuan price-input-visible"
+                                                    value="{{ (int) $item->price }}" placeholder="0" min="0"
+                                                    required data-target="price_raw">
                                             </div>
+                                            <input type="hidden" name="items[{{ $index }}][price]"
+                                                class="price-input" id="price_raw">
                                         </div>
                                     </div>
                                     <div class="col-md-2">
                                         <div class="mb-2">
                                             <label class="form-label">Subtotal</label>
-                                            <input type="text" class="form-control subtotal-input" readonly
-                                                value="Rp {{ number_format($item->quantity * $item->product_unit_price, 0, ',', '.') }}">
+                                            <input type="text" class="form-control form-control-sm subtotal-input"
+                                                readonly
+                                                value="Rp {{ number_format($item->quantity * $item->price, 0, ',', '.') }}">
                                         </div>
                                     </div>
                                     <div class="col-md-1">
                                         <div class="mb-2">
                                             <label class="form-label">&nbsp;</label>
                                             @if ($index > 0)
-                                                <button type="button" class="btn btn-outline-danger btn-remove-item"
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-danger btn-remove-item"
                                                     data-index="{{ $index }}">
                                                     <i class="ti ti-trash"></i>
                                                 </button>
@@ -172,21 +171,68 @@
                 </div>
         </form>
     </div>
-    </div>
-    </div>
-    </div>
-    </div>
-    </div>
-    </div>
 @endsection
 
 @push('scripts')
     <script>
         $(document).ready(function() {
+            // UTILITIES
+            function formatAngkaRibuan(angka) {
+                // 1. Ubah ke string dan hilangkan semua karakter selain angka (digit 0-9)
+                var cleaned = ('' + angka).replace(/[^\d]/g, '');
+
+                if (cleaned === '') {
+                    return '';
+                }
+
+                // 2. Tambahkan titik sebagai pemisah ribuan
+                return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            }
+
+            function setupRibuanInput(inputElement) {
+                var input = $(inputElement);
+                var rawValueInputId = input.data('target');
+                var rawValueInput = $('#' + rawValueInputId);
+
+                // --- Jalankan pada saat inisialisasi (halaman dimuat) ---
+                var initialValue = input.val();
+                var cleanedInitialValue = initialValue.replace(/[^\d]/g, '');
+                rawValueInput.val(cleanedInitialValue); // Set nilai hidden input
+                input.val(formatAngkaRibuan(initialValue)); // Format nilai di input yang terlihat
+
+                // --- Event Listener untuk perubahan saat mengetik ---
+                input.on('input', function(e) {
+                    var value = input.val();
+
+                    // Simpan nilai non-formatted ke input hidden
+                    var cleanedValue = value.replace(/[^\d]/g, '');
+                    rawValueInput.val(cleanedValue);
+
+                    // Format nilai di input yang terlihat
+                    var formattedValue = formatAngkaRibuan(value);
+
+                    // Pertahankan posisi kursor saat mengetik
+                    var oldLength = value.length;
+                    var newLength = formattedValue.length;
+                    var cursorPos = input[0].selectionStart;
+
+                    input.val(formattedValue);
+
+                    input[0].setSelectionRange(
+                        cursorPos + (newLength - oldLength),
+                        cursorPos + (newLength - oldLength)
+                    );
+                });
+            }
+            $('.format-ribuan').each(function() {
+                setupRibuanInput(this);
+            });
+
             let itemIndex = {{ count($supplierPurchase->supplier_purchase_item) }};
 
             // Calculate subtotal for an item
             function calculateSubtotal(index) {
+                var productItem = $(`.product-item:eq(${index})`);
                 const quantity = $(`input[name="items[${index}][quantity]"]`).val();
                 const price = $(`.product-item:eq(${index}) .price-input`).val();
                 const subtotal = quantity * price;
@@ -197,11 +243,25 @@
             // Calculate total amount
             function calculateTotal() {
                 let total = 0;
-                $('.price-input').each(function(index) {
-                    const quantity = $(this).siblings('.quantity-input').val() || 0;
-                    const price = $(this).val() || 0;
-                    total += quantity * price;
+                // Iterasi melalui setiap item produk yang ada
+                $('.product-item').each(function(index) {
+                    // Cari input quantity dan price di dalam product-item saat ini
+                    const quantity = $(this).find('.quantity-input').val() || 0;
+                    const price = $(this).find('.price-input').val() || 0;
+
+                    // Pastikan quantity dan price adalah angka sebelum dihitung
+                    const numericQuantity = parseFloat(quantity) || 0;
+                    const numericPrice = parseFloat(price) || 0;
+
+                    total += numericQuantity * numericPrice;
                 });
+                // $('.price-input').each(function(index) {
+                //     const quantity = $(this).siblings('.quantity-input').val() || 0;
+                //     const price = $(this).val() || 0;
+                //     total += quantity * price;
+                //     console.log(quantity);
+
+                // });
                 $('#total_amount').val('Rp ' + total.toLocaleString('id-ID'));
             }
 
@@ -213,7 +273,7 @@
                     <div class="col-md-4">
                         <div class="mb-2">
                             <label class="form-label">Produk</label>
-                            <select class="form-select product-select" name="items[${itemIndex}][product_id]" required>
+                            <select class="form-select form-select-sm product-select" name="items[${itemIndex}][product_id]" required>
                                 <option value="">Pilih Produk</option>
                                 @foreach ($products as $product)
                                     <option value="{{ $product->id }}" 
@@ -228,7 +288,7 @@
                     <div class="col-md-2">
                         <div class="mb-2">
                             <label class="form-label">Jumlah</label>
-                            <div class="input-group">
+                            <div class="input-group input-group-sm">
                                 <button type="button" class="btn btn-outline-secondary btn-decrease" data-index="${itemIndex}">
                                     <i class="ti ti-minus"></i>
                                 </button>
@@ -243,7 +303,7 @@
                     <div class="col-md-3">
                         <div class="mb-2">
                             <label class="form-label">Harga Beli per Unit</label>
-                            <div class="input-group">
+                            <div class="input-group input-group-sm">
                                 <span class="input-group-text">Rp</span>
                                 <input type="number" class="form-control price-input" 
                                        name="items[${itemIndex}][price]" placeholder="0" min="0" step="0.01" required>
@@ -253,13 +313,13 @@
                     <div class="col-md-2">
                         <div class="mb-2">
                             <label class="form-label">Subtotal</label>
-                            <input type="text" class="form-control subtotal-input" readonly>
+                            <input type="text" class="form-control form-control-sm subtotal-input" readonly>
                         </div>
                     </div>
                     <div class="col-md-1">
                         <div class="mb-2">
                             <label class="form-label">&nbsp;</label>
-                            <button type="button" class="btn btn-outline-danger btn-remove-item" data-index="${itemIndex}">
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item" data-index="${itemIndex}">
                                 <i class="ti ti-trash"></i>
                             </button>
                         </div>
@@ -300,7 +360,7 @@
             });
 
             // Handle quantity and price changes
-            $(document).on('input', '.quantity-input, .price-input', function() {
+            $(document).on('input', '.quantity-input, .price-input-visible', function() {
                 const index = $(this).closest('.product-item').index();
                 calculateSubtotal(index);
             });
