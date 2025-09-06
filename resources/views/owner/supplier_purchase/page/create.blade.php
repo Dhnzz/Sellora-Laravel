@@ -109,9 +109,10 @@
                                         <label class="control-label mb-1">Harga Beli per Unit</label>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">Rp</span>
-                                            <input type="number" class="form-control price-input" name="items[0][price]"
-                                                placeholder="0" min="0" step="0.01" required>
+                                            <input type="text" class="form-control price-input-visible"
+                                                placeholder="0" required>
                                         </div>
+                                        <input type="hidden" class="price-input" name="items[0][price]" required>
                                     </div>
                                 </div>
                                 <div class="col-md-2">
@@ -171,6 +172,14 @@
         $(document).ready(function() {
             let itemIndex = 1;
 
+            function formatAngkaRibuan(angka) {
+                var cleaned = ('' + angka).replace(/[^\d]/g, '');
+                if (cleaned === '') {
+                    return '';
+                }
+                return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            }
+
             // Generate invoice number
             function generateInvoiceNumber() {
                 const today = new Date();
@@ -184,7 +193,7 @@
             // Calculate subtotal for an item
             function calculateSubtotal(index) {
                 const quantity = $(`input[name="items[${index}][quantity]"]`).val();
-                const price = $(`.product-item:eq(${index}) .price-input`).val();
+                const price = $(`.product-item:eq(${index}) .price-input`).val() || 0;
                 const subtotal = quantity * price;
                 $(`.product-item:eq(${index}) .subtotal-input`).val('Rp ' + subtotal.toLocaleString('id-ID'));
                 calculateTotal();
@@ -193,12 +202,9 @@
             // Calculate total amount
             function calculateTotal() {
                 let total = 0;
-                $('.price-input').each(function(index) {
-                    const quantity = $(this).closest('.col-md-3')
-                        .siblings('.col-md-2')
-                        .find('.quantity-input')
-                        .val() || 0;
-                    const price = $(this).val() || 0;
+                $('.product-item').each(function() {
+                    const quantity = $(this).find('.quantity-input').val() || 0;
+                    const price = $(this).find('.price-input').val() || 0;
                     total += quantity * price;
                 });
                 $('#total_amount').val('Rp ' + total.toLocaleString('id-ID'));
@@ -244,9 +250,9 @@
                             <label class="control-label mb-1">Harga Beli per Unit</label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text">Rp</span>
-                                <input type="number" class="form-control price-input" 
-                                       name="items[${itemIndex}][price]" placeholder="0" min="0" step="0.01" required>
+                                <input type="text" class="form-control price-input-visible" placeholder="0" required>
                             </div>
+                            <input type="hidden" class="price-input" name="items[${itemIndex}][price]" required>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -269,7 +275,6 @@
 
                 $('#product-items').append(newItem);
 
-                // Show remove button for first item if there are multiple items
                 if ($('.product-item').length > 1) {
                     $('.product-item:first .btn-remove-item').show();
                 }
@@ -283,7 +288,6 @@
                     $(this).closest('.product-item').remove();
                     calculateTotal();
 
-                    // Hide remove button for first item if only one item remains
                     if ($('.product-item').length === 1) {
                         $('.product-item:first .btn-remove-item').hide();
                     }
@@ -292,7 +296,7 @@
 
             // Increase quantity
             $(document).on('click', '.btn-increase', function() {
-                const index = $(this).data('index');
+                const index = $(this).closest('.product-item').index();
                 const input = $(`input[name="items[${index}][quantity]"]`);
                 input.val(parseInt(input.val()) + 1);
                 calculateSubtotal(index);
@@ -300,7 +304,7 @@
 
             // Decrease quantity
             $(document).on('click', '.btn-decrease', function() {
-                const index = $(this).data('index');
+                const index = $(this).closest('.product-item').index();
                 const input = $(`input[name="items[${index}][quantity]"]`);
                 const currentVal = parseInt(input.val());
                 if (currentVal > 1) {
@@ -309,8 +313,32 @@
                 }
             });
 
-            // Handle quantity and price changes
-            $(document).on('input', '.quantity-input, .price-input', function() {
+            // Handle quantity changes
+            $(document).on('input', '.quantity-input', function() {
+                const index = $(this).closest('.product-item').index();
+                calculateSubtotal(index);
+            });
+
+            // Handle price changes with formatting
+            $(document).on('input', '.price-input-visible', function() {
+                var visibleInput = $(this);
+                var rawValue = visibleInput.val().replace(/[^\d]/g, '');
+                
+                visibleInput.closest('.mb-2').find('.price-input').val(rawValue);
+
+                var formattedValue = formatAngkaRibuan(rawValue);
+                
+                var oldLength = visibleInput.val().length;
+                var newLength = formattedValue.length;
+                var cursorPos = visibleInput[0].selectionStart;
+
+                visibleInput.val(formattedValue);
+
+                visibleInput[0].setSelectionRange(
+                    cursorPos + (newLength - oldLength),
+                    cursorPos + (newLength - oldLength)
+                );
+
                 const index = $(this).closest('.product-item').index();
                 calculateSubtotal(index);
             });
@@ -320,9 +348,11 @@
                 const selectedOption = $(this).find('option:selected');
                 const price = selectedOption.data('price');
                 const index = $(this).closest('.product-item').index();
+                const productItem = $(this).closest('.product-item');
 
                 if (price) {
-                    $(this).closest('.product-item').find('.price-input').val(price);
+                    productItem.find('.price-input').val(price);
+                    productItem.find('.price-input-visible').val(formatAngkaRibuan(price));
                     calculateSubtotal(index);
                 }
             });
@@ -331,7 +361,6 @@
             $('#supplier-purchase-form').submit(function(e) {
                 e.preventDefault();
 
-                // Validate form
                 if (!this.checkValidity()) {
                     e.stopPropagation();
                     $(this).addClass('was-validated');
