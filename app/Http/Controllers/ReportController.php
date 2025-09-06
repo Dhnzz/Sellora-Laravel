@@ -149,11 +149,8 @@ class ReportController
             1 => 'st.invoice_id',
             2 => 'c.name',
             3 => 'sa.name',
-            4 => 'st.initial_total_amount',
-            5 => 'discount_amount_alias', // alias jumlah diskon (initial - final)
-            7 => 'return_amount_alias', // alias
-            8 => 'st.final_total_amount',
-            9 => 'st.transaction_status',
+            4 => 'st.final_total_amount',
+            5 => 'st.transaction_status',
         ];
         $orderBy = $cols[$orderColIdx] ?? 'st.invoice_date';
 
@@ -195,6 +192,7 @@ class ReportController
             st.transaction_status as status
         ',
             )
+            ->when($orderBy === 'transaction_status', fn($q) => $q->orderByRaw('st.transaction_status ' . $orderDir))
             ->when($orderBy === 'discount_amount_alias', fn($q) => $q->orderByRaw('(st.initial_total_amount - st.final_total_amount) ' . $orderDir))
             ->when($orderBy === 'return_amount_alias', fn($q) => $q->orderByRaw('0 ' . $orderDir)) // placeholder, ganti kalau sudah ada nilai retur per invoice
             ->when(!in_array($orderBy, ['discount_amount_alias']), fn($q) => $q->orderBy($orderBy, $orderDir))
@@ -415,5 +413,26 @@ class ReportController
         $from = $r->filled('from') ? Carbon::parse($r->from)->startOfDay() : null;
         $to = $r->filled('to') ? Carbon::parse($r->to)->endOfDay() : null;
         return [$from, $to];
+    }
+
+    /**
+     * Mendapatkan label status dalam format HTML
+     *
+     * @param string $status
+     * @return string
+     */
+    private function getStatusLabel($status)
+    {
+        if ($status === 'pending') {
+            return '<span class="badge bg-warning">Pending</span>';
+        } elseif ($status === 'process') {
+            return '<span class="badge bg-info">Diproses</span>';
+        } elseif ($status === 'success') {
+            return '<span class="badge bg-success">Selesai</span>';
+        } elseif ($status === 'cancelled') {
+            return '<span class="badge bg-danger">Dibatalkan</span>';
+        }
+
+        return '<span class="badge bg-secondary">Unknown</span>';
     }
 }
