@@ -8,7 +8,6 @@ use App\Models\Owner;
 use App\Models\Customer;
 use App\Models\SalesAgent;
 use Illuminate\Database\Seeder;
-use App\Models\WarehouseManager;
 use Spatie\Permission\Models\Role;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
@@ -21,7 +20,6 @@ class UserSeeder extends Seeder
     {
         Role::create(['name' => 'owner']);
         Role::create(['name' => 'admin']);
-        Role::create(['name' => 'warehouse']);
         Role::create(['name' => 'sales']);
         Role::create(['name' => 'customer']);
         
@@ -59,23 +57,6 @@ class UserSeeder extends Seeder
             ]);
         }
 
-        // WAREHOUSE MANAGER
-        for ($i = 1; $i <= 5; $i++) {
-            $userWarehouse = User::create([
-                'email' => 'warehouse'.$i.'@app.id',
-                'password' => bcrypt('warehouse123'),
-            ]);
-            $userWarehouse->assignRole('warehouse');
-
-            // WarehouseManager
-            $warehouseManager = WarehouseManager::create([
-                'user_id' => $userWarehouse->id,
-                'name' => 'Warehouse Manager '. $i,
-                'phone' => '081234567890',
-                'photo' => 'uploads/images/users/user-1.jpg',
-                'address' => 'Jl. Gudang No. '. $i,
-            ]);
-        }
 
         // SALES AGENT
         for ($i = 1; $i <= 5; $i++) {
