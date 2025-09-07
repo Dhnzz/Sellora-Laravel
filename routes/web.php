@@ -173,22 +173,6 @@ Route::middleware(['auth'])->group(function () {
                             Route::delete('/delete/{admin}', [AdminController::class, 'destroy'])->name('destroy');
                         });
 
-                    // Warehouse Manager Management
-                    Route::prefix('warehouse_manager')
-                        ->name('warehouse_manager.')
-                        ->group(function () {
-                            Route::get('/', [WarehouseManagerController::class, 'index'])->name('index');
-                            Route::get('/data', [WarehouseManagerController::class, 'getAll'])->name('data');
-                            Route::get('/create', [WarehouseManagerController::class, 'create'])->name('create');
-                            Route::post('/store', [WarehouseManagerController::class, 'store'])->name('store');
-                            Route::put('/resetPassword/{warehouse_manager}', [WarehouseManagerController::class, 'resetPassword'])->name('resetPassword');
-                            Route::put('/deletePhoto/{warehouse_manager}', [WarehouseManagerController::class, 'deletePhoto'])->name('deletePhoto');
-                            Route::get('/{warehouse_manager}', [WarehouseManagerController::class, 'getById'])->name('detail');
-                            Route::get('/edit/{warehouse_manager}', [WarehouseManagerController::class, 'edit'])->name('edit');
-                            Route::put('/update/{warehouse_manager}', [WarehouseManagerController::class, 'update'])->name('update');
-                            Route::delete('/delete/{warehouse_manager}', [WarehouseManagerController::class, 'destroy'])->name('destroy');
-                        });
-
                     // Sales Management
                     Route::prefix('sales')
                         ->name('sales.')
