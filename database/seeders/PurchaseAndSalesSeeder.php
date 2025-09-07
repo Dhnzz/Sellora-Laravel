@@ -44,7 +44,6 @@ class PurchaseAndSalesSeeder extends Seeder
         $products = Product::all();
         $suppliers = Supplier::all();
         $productUnits = ProductUnit::all();
-        $warehouseManagers = WarehouseManager::all();
         $productBundles = ProductBundle::where('is_active', true)->get(); // Hanya bundle aktif
 
         DB::beginTransaction();
@@ -305,49 +304,6 @@ class PurchaseAndSalesSeeder extends Seeder
             }
             $this->command->info('Created ' . $successfulSupplierPurchases . ' Supplier Purchases.');
 
-            // ============================ Delivery Returns (dinonaktifkan) ============================
-            // Bagian pengembalian pengantaran di-nonaktifkan sesuai instruksi.
-
-            // ============================ Stock Adjustments (Manual/Other Reasons) ============================
-            $numManualAdjustments = rand(5, 10);
-            $successfulManualAdjustments = 0;
-            $warehouseManagers = WarehouseManager::all(); // Ensure this is loaded if not already at the top
-
-            if ($warehouseManagers->isNotEmpty()) {
-                for ($i = 0; $i < $numManualAdjustments; $i++) {
-                    $product = $products->random();
-                    $warehouseManager = $warehouseManagers->random();
-                    $adjustmentDate = $faker->dateTimeBetween('this year - 6 months', 'now');
-
-                    $adjustmentType = $faker->randomElement(['increase', 'decrease']);
-                    $quantity = rand(1, 20); // Random quantity for adjustment
-
-                    // Adjust quantity sign based on type
-                    $quantityAdjusted = $adjustmentType == 'decrease' ? -$quantity : $quantity;
-
-                    StockAdjustment::create([
-                        'warehouse_manager_id' => $warehouseManager->id,
-                        'product_id' => $product->id,
-                        'reason' => $faker->randomElement(['Barang rusak di gudang', 'Selisih stok fisik', 'Barang hilang', 'Penerimaan non-pembelian']),
-                        'quantity' => $quantityAdjusted,
-                        'adjustment_type' => $adjustmentType,
-                        'source_type' => 'physical_check', // Or 'other'
-                        'source_id' => null,
-                        'adjustment_date' => $adjustmentDate->format('Y-m-d'),
-                    ]);
-                    $successfulManualAdjustments++;
-
-                    // Update actual stock for manual adjustments
-                    $stock = Stock::where('product_id', $product->id)->first();
-                    if ($stock) {
-                        $stock->increment('quantity', $quantityAdjusted);
-                    } else {
-                        // If no stock record, create one
-                        Stock::create(['product_id' => $product->id, 'quantity' => $quantityAdjusted]);
-                    }
-                }
-            }
-            $this->command->info('Created ' . $successfulManualAdjustments . ' manual Stock Adjustments.');
             DB::commit(); // Commit all transactions if successful
         } catch (\Exception $e) {
             DB::rollBack(); // Rollback on error
