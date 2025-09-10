@@ -288,7 +288,7 @@
     </main>
 
     {{-- FOOTER --}}
-    <footer class="c-footer mt-5 pt-5 pb-4">
+    <footer class="c-footer mt-5 pt-5 pb-4 fixed-bottom">
         <div class="container">
             <div class="row g-4">
                 <div class="col-12 col-md-4">

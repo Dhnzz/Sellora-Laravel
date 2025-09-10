@@ -28,12 +28,12 @@
                         <h6 class="mb-3">Urutkan</h6>
                         <div class="mb-2">
                             <ul class="list-unstyled mb-0">
-                                <li class="mb-1">
+                                {{-- <li class="mb-1">
                                     <a href="{{ request()->fullUrlWithQuery(['sortBy' => 'recommended']) }}"
                                         class="text-decoration-none {{ request('sortBy') == 'recommended' ? 'fw-bold text-primary' : 'text-secondary' }}">
                                         Rekomendasi
                                     </a>
-                                </li>
+                                </li> --}}
                                 <li class="mb-1">
                                     <a href="{{ request()->fullUrlWithQuery(['sortBy' => 'newest']) }}"
                                         class="text-decoration-none {{ request('sortBy') == 'newest' ? 'fw-bold text-primary' : 'text-secondary' }}">
