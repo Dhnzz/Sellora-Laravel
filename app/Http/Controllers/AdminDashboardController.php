@@ -91,7 +91,7 @@ class AdminDashboardController
     {
         $range = $request->input('range', 'weekly');
 
-        $query = SalesTransaction::query();
+        $query = SalesTransaction::query()->where('transaction_status','success');
         if ($range === 'weekly') {
             $query->whereBetween('invoice_date', [now()->subDays(6)->toDateString(), now()->toDateString()]);
         } elseif ($range === 'monthly') {
