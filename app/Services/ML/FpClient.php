@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Http;
 
 class FpClient
 {
-    public function mineRules(array $transactions, float $minSup = 0.02, float $minConf = 0.3, int $topK = 50, string $metric = 'confidence'): array
+    public function mineRules(array $transactions, float $minSup = 0.06, float $minLift = 3, int $topK = 50, string $metric = 'lift'): array
     {
         $url = rtrim(config('prediction.flask_url'), '/') . '/fp/rules';
         $req = Http::timeout(60);
@@ -15,7 +15,7 @@ class FpClient
         $res = $req->post($url, [
             'transactions' => $transactions,
             'min_support' => $minSup,
-            'min_confidence' => $minConf,
+            'min_lift' => $minLift,
             'top_k' => $topK,
             'metric' => $metric,
         ]);

@@ -49,17 +49,17 @@
                                 <span class="hide-menu">Tutup Buku Bulanan</span>
                             </a>
                         </li>
-                        {{-- <li class="nav-small-cap">
+                        <li class="nav-small-cap">
                             <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
                             <span class="hide-menu">Penawaran</span>
-                        </li> --}}
-                        {{-- <li class="sidebar-item">
+                        </li>
+                        <li class="sidebar-item">
                             <a href="{{ route('owner.bundle.index') }}"
                                 class="sidebar-link d-flex align-items-center {{ Request::routeIs('owner.bundle.*') ? 'active' : '' }}">
                                 <i class="ti ti-cash fs-5 me-2"></i>
                                 <span class="hide-menu">Manajemen Bundle</span>
                             </a>
-                        </li> --}}
+                        </li>
                         <li class="nav-small-cap">
                             <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
                             <span class="hide-menu">Operasional</span>
