@@ -303,7 +303,8 @@ class ProductBundleController
             return back()->with('warning', 'Tidak ada data transaksi yang cocok dengan filter.');
         }
         $fp = app(FpClient::class);
-        $result = $fp->mineRules($payload, 0.02, 0.3, 50, 'confidence');
+        // Gunakan lift sebagai metric, min_support 0.06, min_lift 2, tanpa min_confidence
+        $result = $fp->mineRules($payload, 0.06, 2, 50, 'lift');
         $rules = $result['rules'] ?? [];
 
         ProductAssociation::query()->delete();
@@ -426,7 +427,8 @@ class ProductBundleController
                     $q->orWhereJsonContains('atecedent_product_ids', (int) $sid); // (typo kolom dipertahankan)
                 }
             })
-            ->get(['consequent_product_ids', 'confidence', 'lift']);
+            ->where('lift', '>=', 2)
+            ->get(['consequent_product_ids', 'lift']);
 
         $score = [];
         foreach ($assocs as $a) {
@@ -435,7 +437,8 @@ class ProductBundleController
                 if ($selected->contains($cid)) {
                     continue;
                 }
-                $score[$cid] = ($score[$cid] ?? 0) + (float) $a->confidence + 0.1 * (float) $a->lift;
+                // Skor berbasis lift; confidence tidak lagi dipakai
+                $score[$cid] = ($score[$cid] ?? 0) + (float) $a->lift;
             }
         }
         // pastikan semua produk sisa ikut perangkingan + tambah bobot freq periode
