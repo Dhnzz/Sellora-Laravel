@@ -23,7 +23,7 @@
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-end align-items-start g-2 w-full">
-                <a href="{{ route('owner.master_data.product.create') }}" class="btn btn-sm btn-success">
+                <a href="{{ route('admin.master_data.product.create') }}" class="btn btn-sm btn-success">
                     <i class="ti ti-plus"></i> &nbsp; Tambah produk
                 </a>
             </div>
@@ -57,7 +57,7 @@
                 processing: true, // Menampilkan indikator loading
                 serverSide: true, // Mode server-side processing
                 ajax: {
-                    url: "{{ route('owner.master_data.product.data') }}", // Endpoint API untuk DataTables
+                    url: "{{ route('admin.master_data.product.data') }}", // Endpoint API untuk DataTables
                     type: 'GET',
                     // Anda bisa menambahkan data tambahan ke request di sini jika diperlukan
                     // data: function (d) {
@@ -137,7 +137,7 @@
                 e.preventDefault();
 
                 var productId = $(this).data('id');
-                var deleteUrl = "{{ route('owner.master_data.product.destroy', ':id') }}";
+                var deleteUrl = "{{ route('admin.master_data.product.destroy', ':id') }}";
                 deleteUrl = deleteUrl.replace(':id', productId);
 
                 if (confirm(

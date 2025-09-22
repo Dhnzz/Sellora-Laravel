@@ -29,7 +29,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-sm table-bordered mt-4" id="table">
+                <table class="table table-sm table-bordered mt-4" id="table-admin-product-brand">
                     <thead>
                         <tr>
                             <th class="text-center" style="width: 5%">No</th>
@@ -54,7 +54,7 @@
                     <h1 class="modal-title fs-5" id="modalTambahLabel">Tambah Brand Produk</h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('owner.master_data.product_brand.store') }}" method="POST"
+                <form action="{{ route('admin.master_data.product_brand.store') }}" method="POST"
                     enctype="multipart/form-data">
                     @csrf
                     <div class="modal-body">
@@ -117,11 +117,11 @@
     <script>
         let dataTable
         $(document).ready(function() {
-            dataTable = $('#table').DataTable({
+            dataTable = $('#table-admin-product-brand').DataTable({
                 processing: true, // Menampilkan indikator loading
                 serverSide: true, // Mode server-side processing
                 ajax: {
-                    url: "{{ route('owner.master_data.product_brand.data') }}", // Endpoint API untuk DataTables
+                    url: "{{ route('admin.master_data.product_brand.data') }}", // Endpoint API untuk DataTables
                     type: 'GET',
                     // Anda bisa menambahkan data tambahan ke request di sini jika diperlukan
                     // data: function (d) {
@@ -184,7 +184,7 @@
                 e.preventDefault();
 
                 var productBrandId = $(this).data('id');
-                var deleteUrl = "{{ route('owner.master_data.product_brand.destroy', ':id') }}";
+                var deleteUrl = "{{ route('admin.master_data.product_brand.destroy', ':id') }}";
                 deleteUrl = deleteUrl.replace(':id', productBrandId);
 
                 if (confirm(
@@ -216,7 +216,7 @@
             // Handle klik tombol edit
             $(document).on('click', '.edit-btn', function(e) {
                 var id = $(this).data('id');
-                var editUrl = "{{ route('owner.master_data.product_brand.edit', ':id') }}";
+                var editUrl = "{{ route('admin.master_data.product_brand.edit', ':id') }}";
                 editUrl = editUrl.replace(':id', id);
                 // Reset form
                 var form = $('#modalEdit form');
@@ -224,7 +224,7 @@
                 form.find('.is-invalid').removeClass('is-invalid');
                 form.find('.invalid-feedback').remove();
                 // Set action form update
-                var updateUrl = "{{ route('owner.master_data.product_brand.update', ':id') }}/";
+                var updateUrl = "{{ route('admin.master_data.product_brand.update', ':id') }}/";
                 updateUrl = updateUrl.replace(':id', id);
                 form.attr('action', updateUrl);
                 // Ambil data
