@@ -53,12 +53,15 @@
                             <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
                             <span class="hide-menu">Penawaran</span>
                         </li>
-                        <li class="sidebar-item">
+                        <li class="sidebar-item position-relative">
                             <a href="{{ route('owner.bundle.index') }}"
                                 class="sidebar-link d-flex align-items-center {{ Request::routeIs('owner.bundle.*') ? 'active' : '' }}">
                                 <i class="ti ti-cash fs-5 me-2"></i>
                                 <span class="hide-menu">Manajemen Bundle</span>
                             </a>
+                            <span class="badge bg-success position-absolute rounded-pill" style="top: 50%; right: -18px; transform: translateY(-50%); font-size: 0.7em; z-index: 2;">
+                                Baru
+                            </span>
                         </li>
                         <li class="nav-small-cap">
                             <i class="ti ti-dots nav-small-cap-icon fs-4"></i>

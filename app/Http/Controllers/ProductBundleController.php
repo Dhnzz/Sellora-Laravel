@@ -378,6 +378,7 @@ class ProductBundleController
         $selected = collect($validated['selected_ids'] ?? [])
             ->unique()
             ->values();
+
         $filter = $this->currentBundleFilter();
 
         // Ambil semua produk (batasi brand jika ada)
@@ -387,7 +388,7 @@ class ProductBundleController
         }
         $allProducts = $allProductsQ->get()->keyBy('id');
 
-        // Frekuensi per periode
+        // Frekuensi per periode (terfilter tanggal & brand kalau ada)
         $freqQuery = SalesTransactionItem::query()->select('sales_transaction_items.product_id', DB::raw('COUNT(*) as freq'))->join('sales_transactions', 'sales_transactions.id', '=', 'sales_transaction_items.sales_transaction_id');
 
         if ($filter['from'] && $filter['to']) {
@@ -397,7 +398,7 @@ class ProductBundleController
             $freqQuery->join('products', 'products.id', '=', 'sales_transaction_items.product_id')->where('products.product_brand_id', $filter['brand_id']);
         }
 
-        $freq = $freqQuery->groupBy('sales_transaction_items.product_id')->pluck('freq', 'product_id'); // Map product_id => freq (sesuai periode)
+        $freq = $freqQuery->groupBy('sales_transaction_items.product_id')->pluck('freq', 'product_id'); // Map: product_id => freq (sesuai periode)
 
         // Awal: belum ada pilihan → urutkan terlaris periode lalu sisanya
         if ($selected->isEmpty()) {
@@ -408,60 +409,95 @@ class ProductBundleController
             $list = $ordered
                 ->map(function ($id) use ($allProducts, $freq) {
                     $p = $allProducts->get($id);
+                    if (!$p) {
+                        return null;
+                    } // jaga-jaga kalau brand filter menyaring habis
                     return [
                         'id' => $p->id,
                         'name' => $p->name,
                         'selling_price' => (float) $p->selling_price,
-                        'freq' => (int) ($freq[$p->id] ?? 0), // << jumlah terjual di periode
+                        'freq' => (int) ($freq[$p->id] ?? 0), // jumlah terjual di periode
                     ];
                 })
+                ->filter()
                 ->values();
 
             return response()->json(['products' => $list]);
         }
 
-        // Ada pilihan: skor asosiasi + bobot kecil dari freq periode
+        // Ada pilihan: tampilkan hanya produk yang PUNYA HUBUNGAN (aturan asosiasi)
+        // Catatan: kolom antecedent punya typo "atecedent_product_ids" di DB → kita pertahankan
         $assocs = ProductAssociation::query()
             ->where(function ($q) use ($selected) {
+                // aturan relevan jika antecedent mengandung salah satu selected
                 foreach ($selected as $sid) {
-                    $q->orWhereJsonContains('atecedent_product_ids', (int) $sid); // (typo kolom dipertahankan)
+                    $q->orWhereJsonContains('atecedent_product_ids', (int) $sid);
+                }
+                // ATAU consequent mengandung salah satu selected
+                foreach ($selected as $sid) {
+                    $q->orWhereJsonContains('consequent_product_ids', (int) $sid);
                 }
             })
-            ->where('lift', '>=', 2)
-            ->get(['consequent_product_ids', 'lift']);
+            ->where('lift', '>=', 2) // threshold lift tetap
+            ->get(['atecedent_product_ids', 'consequent_product_ids', 'lift']);
 
         $score = [];
+        $productsWithRules = collect();
+
         foreach ($assocs as $a) {
-            $conseq = json_decode($a->consequent_product_ids, true) ?: [];
-            foreach ($conseq as $cid) {
-                if ($selected->contains($cid)) {
-                    continue;
-                }
-                // Skor berbasis lift; confidence tidak lagi dipakai
-                $score[$cid] = ($score[$cid] ?? 0) + (float) $a->lift;
-            }
-        }
-        // pastikan semua produk sisa ikut perangkingan + tambah bobot freq periode
-        foreach ($allProducts->keys() as $pid) {
-            if ($selected->contains($pid)) {
+            $ants = collect(json_decode($a->atecedent_product_ids, true) ?: []);
+            $cons = collect(json_decode($a->consequent_product_ids, true) ?: []);
+
+            // aturan dianggap relevan jika melibatkan set terpilih di salah satu sisi
+            $isRelevant = $ants->intersect($selected)->isNotEmpty() || $cons->intersect($selected)->isNotEmpty();
+            if (!$isRelevant) {
                 continue;
             }
-            $score[$pid] = ($score[$pid] ?? 0) + 0.001 * (int) ($freq[$pid] ?? 0);
+
+            // kandidat = semua item dalam aturan dikurangi yang sudah dipilih
+            $allItems = $ants->merge($cons)->unique();
+            $candidates = $allItems->diff($selected);
+
+            foreach ($candidates as $cid) {
+                // skip jika produk di luar brand filter (karena $allProducts udah difilter brand)
+                if (!$allProducts->has($cid)) {
+                    continue;
+                }
+
+                // Skor berbasis lift + bobot kecil dari frekuensi periode (biar stabil)
+                $baseLift = (float) $a->lift;
+                $bonus = 0.001 * (int) ($freq[$cid] ?? 0);
+                $score[$cid] = ($score[$cid] ?? 0) + ($baseLift + $bonus);
+
+                $productsWithRules->push($cid);
+            }
         }
 
+        $productsWithRules = $productsWithRules->unique()->values();
+
+        // Jika tidak ada produk dengan aturan, kembalikan list kosong
+        if ($productsWithRules->isEmpty()) {
+            return response()->json(['products' => []]);
+        }
+
+        // Urutkan kandidat berdasarkan skor (desc)
         arsort($score);
         $orderedIds = collect(array_keys($score));
 
         $list = $orderedIds
             ->map(function ($id) use ($allProducts, $freq) {
                 $p = $allProducts->get($id);
+                if (!$p) {
+                    return null;
+                }
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
                     'selling_price' => (float) $p->selling_price,
-                    'freq' => (int) ($freq[$p->id] ?? 0), // << jumlah terjual di periode
+                    'freq' => (int) ($freq[$p->id] ?? 0), // jumlah terjual di periode
                 ];
             })
+            ->filter()
             ->values();
 
         return response()->json(['products' => $list]);

@@ -64,7 +64,7 @@
                         <div class="row g-3">
                             <div class="col-12">
                                 <div class="d-flex flex-column justify-content-center">
-                                    <label for="fileInput" class="text-center mx-auto" >
+                                    <label for="fileInput" class="text-center mx-auto">
                                         <div class="image-upload-container">
                                             {{-- Gambar yang akan menjadi tombol dan preview --}}
                                             <img src="{{ asset('uploads/images/product_bundles/bundle-1.png') }}"
@@ -267,34 +267,101 @@
             }
 
             function fetchRank() {
-                const ids = Object.keys(selectedItems); // selectedItems dari script-mu
+                const ids = Object.keys(selectedItems); // kumpulan produk yang sudah dipilih
                 $.get("{{ route('owner.bundle.related-rank') }}", {
-                        selected_ids: ids
-                    },
-                    function(resp) {
-                        const list = $('#productList');
-                        list.empty();
-                        if (resp.products && Array.isArray(resp.products)) {
-                            resp.products.forEach(p => {
-                                const disabled = selectedItems[p.id] ? 'disabled' : '';
-                                list.append(`
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <div class="fw-semibold">${p.name}</div>
-                                            <small class="text-muted">Terjual ${p.freq || 0}x</small><br>
-                                            <small class="text-muted">Rp ${Number(p.selling_price||0).toLocaleString('id-ID')}</small>
-                                        </div>
-                                        <button class="btn btn-sm btn-primary add-related"
-                                            data-id="${p.id}" data-name="${p.name}" data-price="${p.selling_price}" ${disabled}>
-                                            Tambah
-                                        </button>
-                                    </li>
-                                `);
-                            });
+                    selected_ids: ids
+                }, function(resp) {
+                    const list = $('#productList');
+                    list.empty();
+
+                    // Helper nambahin satu baris pesan kosong
+                    const renderEmpty = (msg) => {
+                        list.append(`
+                <li class="list-group-item text-muted text-center py-4">
+                    ${msg}
+                </li>
+            `);
+                    };
+
+                    // Kalau server nggak kirim array dengan benar
+                    if (!resp.products || !Array.isArray(resp.products)) {
+                        if (ids.length > 0) {
+                            // Ada pilihan tapi gak ada hasil
+                            renderEmpty('Tidak ada aturan yang cocok dengan kumpulan produk');
+                        } else {
+                            // Belum ada pilihan & gak ada data
+                            renderEmpty('Belum ada data untuk ditampilkan');
                         }
+                        return;
                     }
-                );
+
+                    // Kalau list kosong
+                    if (resp.products.length === 0) {
+                        if (ids.length > 0) {
+                            // INI YANG KAMU MAU
+                            renderEmpty('Tidak ada aturan yang cocok dengan kumpulan produk');
+                        } else {
+                            renderEmpty('Belum ada data untuk ditampilkan');
+                        }
+                        return;
+                    }
+
+                    // Render item normal
+                    resp.products.forEach(p => {
+                        const disabled = selectedItems[p.id] ? 'disabled' : '';
+                        list.append(`
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-semibold">${p.name}</div>
+                        <small class="text-muted">Terjual ${p.freq || 0}x</small><br>
+                        <small class="text-muted">Rp ${Number(p.selling_price||0).toLocaleString('id-ID')}</small>
+                    </div>
+                    <button class="btn btn-sm btn-primary add-related"
+                        data-id="${p.id}" data-name="${p.name}" data-price="${p.selling_price}" ${disabled}>
+                        Tambah
+                    </button>
+                </li>
+            `);
+                    });
+                });
             }
+
+
+            // function fetchRank() {
+            //     const ids = Object.keys(selectedItems); // selectedItems dari script-mu
+            //     $.get("{{ route('owner.bundle.related-rank') }}", {
+            //             selected_ids: ids
+            //         },
+            //         function(resp) {
+            //             const list = $('#productList');
+            //             list.empty();
+            //             if (resp.products && Array.isArray(resp.products)) {
+            //                 resp.products.forEach(p => {
+            //                     const disabled = selectedItems[p.id] ? 'disabled' : '';
+            //                     list.append(`
+        //                         <li class="list-group-item d-flex justify-content-between align-items-center">
+        //                             <div>
+        //                                 <div class="fw-semibold">${p.name}</div>
+        //                                 <small class="text-muted">Terjual ${p.freq || 0}x</small><br>
+        //                                 <small class="text-muted">Rp ${Number(p.selling_price||0).toLocaleString('id-ID')}</small>
+        //                             </div>
+        //                             <button class="btn btn-sm btn-primary add-related"
+        //                                 data-id="${p.id}" data-name="${p.name}" data-price="${p.selling_price}" ${disabled}>
+        //                                 Tambah
+        //                             </button>
+        //                         </li>
+        //                     `);
+            //                 });
+            //             }else{
+            //                 list.append(
+            //                     `
+        //                     Tidak ada produk yang memiliki hubungan dengan produk berikut
+        //                     `
+            //                 )
+            //             }
+            //         }
+            //     );
+            // }
 
             // init: load popular / related rank awal
             fetchRank();
