@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SalesAgent;
 use Carbon\Carbon;
+use App\Models\SalesAgent;
 use Illuminate\Http\Request;
 use App\Exports\ReportExport;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\TxSampleLayoutExport;
 use Maatwebsite\Excel\Excel as ExcelFormat;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController
 {
@@ -407,6 +408,26 @@ class ReportController
         // // ?stream=1 untuk buka di tab (preview), default download
         return $r->boolean('stream') ? $pdf->stream('sales-report.pdf') : $pdf->download('sales-report.pdf');
     }
+
+    public function exportTxSampleLayout(Request $r)
+{
+    // kalau kamu sudah punya helper dateRange(), pakai itu
+    if (method_exists($this, 'dateRange')) {
+        [$from, $to] = $this->dateRange($r);
+    } else {
+        $from = $r->get('from');
+        $to   = $r->get('to');
+    }
+
+    // default: cuma success & process; kalau mau semua status tambahkan ?all_status=1
+    $statuses = $r->has('all_status') ? [] : ['success', 'process'];
+
+    $fromStr = $from ? Carbon::parse($from)->format('Ymd') : 'all';
+    $toStr   = $to   ? Carbon::parse($to)->format('Ymd')   : 'all';
+    $filename = "tx_layout_sample_{$fromStr}_{$toStr}.xlsx";
+
+    return Excel::download(new TxSampleLayoutExport($from, $to, $statuses), $filename);
+}
 
     private function dateRange(Request $r): array
     {

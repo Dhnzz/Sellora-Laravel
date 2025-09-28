@@ -180,7 +180,13 @@
         <div class="card">
             <div class="card-header py-2 d-flex justify-content-between align-items-center">
                 <span>Detail Transaksi</span>
-                <div class="text-muted small" id="trxInfo">Menampilkan 0 baris</div>
+                <div class="flex flex-row">
+                    <div class="text-muted small" id="trxInfo">Menampilkan 0 baris</div>
+                    <a href="{{ route('owner.report.export.tx_items', request()->query()) }}" class="btn btn-primary d-flex align-items-center gap-2">
+                        <i class="ti ti-file-type-xls" style="font-size: 1.2em;"></i>
+                        <span>Export Transaksi + Item (XLSX)</span>
+                    </a>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

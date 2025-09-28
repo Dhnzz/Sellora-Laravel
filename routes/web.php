@@ -149,6 +149,7 @@ Route::middleware(['auth'])->group(function () {
                     Route::get('/export/xlsx', [ReportController::class, 'exportXlsx'])->name('export.xlsx');
                     Route::get('/export/csv', [ReportController::class, 'exportCsv'])->name('export.csv');
                     Route::get('/export/pdf', [ReportController::class, 'exportPdf'])->name('export.pdf');
+                    Route::get('/reports/export/tx-items', [ReportController::class, 'exportTxSampleLayout'])->name('export.tx_items');
                     Route::get('/invoices/{id}', [ReportController::class, 'invoiceShow'])->name('invoice.show'); // 🔍 detail
                     Route::get('/invoice/{id}/pdf', [ReportController::class, 'exportInvoicePdf'])->name('invoice.pdf');
                 });

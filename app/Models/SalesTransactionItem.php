@@ -6,9 +6,11 @@ use App\Models\Product;
 use App\Models\SalesTransaction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class SalesTransactionItem extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'sales_transaction_id',
         'product_id',

@@ -6,12 +6,14 @@ use App\Models\Admin;
 use App\Models\SalesAgent;
 use App\Models\Customer;
 use App\Models\SalesTransactionItem;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SalesTransaction extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'customer_id',
         'admin_id',
